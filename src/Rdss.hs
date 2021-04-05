@@ -34,17 +34,29 @@ data Constant
   | ConstantBitString [Bool]
   deriving stock (Eq, Ord, Show, Generic, Data)
 
+data Function rel
+  = Function -- invariant: must have number of arguments equal to number of columns in the table
+      String -- ^ name of function in scope
+
+data Predicate rel
+  = PredicateAnd (RelAlgebra rel) (RelAlgebra rel)
+  | PredicateOr (RelAlgebra rel) (RelAlgebra rel)
+  | PredicateNot (RelAlgebra rel)
+  | PredicateLike (RelAlgebra rel) (RelAlgebra rel)
+  | PredicateLT (RelAlgebra rel) (RelAlgebra rel)
+  | PredicateEQ (RelAlgebra rel) (RelAlgebra rel)
+
 --------------------------------------------------------------------------------
 
 data RelAlgebra rel
   = Not rel
-  | Const [Constant]
   | Join Natural rel rel
   | Union rel rel
   | Project [Attr] rel -- TODO: should be (Set Attr)
   | Rename AttrPermutation rel
   | Difference rel rel
-  | Select Attr Constant rel -- Int constants are all we have right now
+  | Select Attr (Predicate rel) rel
+  | Map (Function rel) rel
   deriving stock (Eq, Ord, Show, Generic)
   deriving stock (Functor, Foldable, Traversable)
 
