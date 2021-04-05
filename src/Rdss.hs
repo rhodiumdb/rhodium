@@ -39,12 +39,12 @@ data Function rel
       String -- ^ name of function in scope
 
 data Predicate rel
-  = PredicateAnd (RelAlgebra rel) (RelAlgebra rel)
-  | PredicateOr (RelAlgebra rel) (RelAlgebra rel)
-  | PredicateNot (RelAlgebra rel)
-  | PredicateLike (RelAlgebra rel) (RelAlgebra rel)
-  | PredicateLT (RelAlgebra rel) (RelAlgebra rel)
-  | PredicateEQ (RelAlgebra rel) (RelAlgebra rel)
+  = PredicateAnd (Predicate rel) (Predicate rel)
+  | PredicateOr (Predicate rel) (Predicate rel)
+  | PredicateNot (Predicate rel)
+  | PredicateLike Attr String
+  | PredicateLT Attr Int
+  | PredicateEQ Attr Int
 
 --------------------------------------------------------------------------------
 
