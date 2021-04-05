@@ -1,0 +1,51 @@
+cabal-version: 2.2
+name:
+  rdss
+version:
+  0.1
+synopsis:
+  BDD-based implementation of Datalog
+description:
+  A compiler from Datalog to relational algebra, as well as an interpreter for relational algebra
+  that uses binary decision diagrams (BDDs).
+bug-reports:
+  https://github.com/chessai/rdss/issues
+license:
+  Apache-2.0
+license-file:
+  LICENSE
+author:
+  chessai
+  taktoa
+maintainer:
+  chessai <chessai1996@gmail.com>
+copyright:
+  Copyright 2021 chessai
+category:
+  Compiler, Database, Logic Programming
+build-type:
+  Simple
+extra-source-files:
+  CHANGELOG.md
+
+common com
+  default-language:
+    Haskell2010
+  build-depends:
+    , base >= 4.11 && < 4.16
+    , containers >= 0.5.9 && < 0.7
+    , mtl >= 2.2 && < 2.3
+
+library
+  import:
+    com
+  hs-source-dirs:
+    src
+  exposed-modules:
+    Rdss
+
+source-repository head
+  type:
+    git
+  location:
+    https://github.com/chessai/rdss
