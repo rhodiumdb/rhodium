@@ -48,15 +48,19 @@ data Predicate rel
 
 --------------------------------------------------------------------------------
 
+data Viewed rel
+  = Viewed ![Maybe Attr] !rel
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Functor, Foldable, Traversable)
+
 data RelAlgebra rel
-  = Not rel
-  | Join Natural rel rel
-  | Union rel rel
-  | Project [Attr] rel -- TODO: should be (Set Attr)
-  | Rename AttrPermutation rel
-  | Difference rel rel
-  | Select Attr (Predicate rel) rel
-  | Map (Function rel) rel
+  = Not                        (Viewed rel)
+  | Join       Natural         (Viewed rel) (Viewed rel)
+  | Union                      (Viewed rel) (Viewed rel)
+  | Difference                 (Viewed rel) (Viewed rel)
+  | Select     (Predicate rel) (Viewed rel)
+  | Map        (Function rel)  (Viewed rel)
+  | View                       (Viewed rel)
   deriving stock (Eq, Ord, Show, Generic)
   deriving stock (Functor, Foldable, Traversable)
 
