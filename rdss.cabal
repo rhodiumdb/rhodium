@@ -33,8 +33,6 @@ common com
     Haskell2010
   build-depends:
     , base >= 4.11 && < 4.16
-    , containers >= 0.5.9 && < 0.7
-    , mtl >= 2.2 && < 2.3
 
 library
   import:
@@ -43,6 +41,13 @@ library
     src
   exposed-modules:
     Rdss
+  build-depends:
+    , containers >= 0.5.9 && < 0.7
+    , ilist >= 0.4 && < 0.5
+    , generic-lens >= 2.1 && < 2.2
+    , lens >= 5.0 && < 5.1
+    , mtl >= 2.2 && < 2.3
+    , transformers >= 0.5 && < 0.6
 
 source-repository head
   type:

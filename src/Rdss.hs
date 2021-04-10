@@ -1,27 +1,36 @@
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE DeriveFoldable      #-}
-{-# LANGUAGE DeriveFunctor       #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE DeriveTraversable   #-}
-{-# LANGUAGE DerivingStrategies  #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE PackageImports      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData          #-}
+{-# language
+    DataKinds
+  , DeriveDataTypeable
+  , DeriveGeneric
+  , DeriveTraversable
+  , DerivingStrategies
+  , DuplicateRecordFields
+  , ImportQualifiedPost
+  , LambdaCase
+  , PackageImports
+  , RecordWildCards
+  , ScopedTypeVariables
+  , StrictData
+  , TypeApplications
+#-}
 
 module Rdss where
 
 import "base" Control.Monad
+import "base" Data.Char qualified as Char
 import "base" Data.Data (Data)
 import "base" Data.List qualified as List
-import "base" GHC.Generics (Generic)
+import "base" GHC.Generics (Generic, Generic1)
 import "base" Numeric.Natural
 import "containers" Data.Map.Strict (Map)
 import "containers" Data.Map.Strict qualified as Map
 import "containers" Data.Set (Set)
+import "generic-lens" Data.Generics.Product (field)
+import "ilist" Data.List.Index (iforM_)
+import "lens" Control.Lens ((^.))
 import "mtl" Control.Monad.State.Class (get, modify, put)
 import "mtl" Control.Monad.State.Strict (State)
+import "transformers" Control.Monad.Trans.Writer.CPS (WriterT, Writer, execWriter, tell)
 
 --------------------------------------------------------------------------------
 
@@ -41,12 +50,12 @@ data Constant
 data Function rel
   = Function
       String -- ^ name of function in scope
-  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic, Generic1)
   deriving stock (Functor, Foldable, Traversable)
 
 data Viewed rel
   = Viewed AttrPartialPermutation rel
-  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic, Generic1)
   deriving stock (Functor, Foldable, Traversable)
 
 data Predicate rel
@@ -56,7 +65,7 @@ data Predicate rel
   | PredicateLike Attr            String
   | PredicateLT   Attr            Int
   | PredicateEQ   Attr            Int
-  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic, Generic1)
   deriving stock (Functor, Foldable, Traversable)
 
 --------------------------------------------------------------------------------
@@ -70,24 +79,82 @@ data RelAlgebra rel
   | Map        (Function rel)  (Viewed rel)
   | View                       (Viewed rel)
   -- TODO: aggregation?
-  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic, Generic1)
   deriving stock (Functor, Foldable, Traversable)
 
 --------------------------------------------------------------------------------
 
+test :: IO ()
+test = do
+  let ds =
+        [ DataStructure
+          { name = "Tuple"
+          , tyParams =
+              [ TyParam "a"
+              , TyParam "b"
+              ]
+          , members =
+              [ Member "x" (TyBasic (TypeName "a"))
+              , Member "y" (TyBasic (TypeName "b"))
+              ]
+          , methods = []
+          }
+        ]
+  mapM_ (putStrLn . toHaskell) ds
+
+toHaskell :: DataStructure -> String
+toHaskell DataStructure{..} = execWriter go
+  where
+    go :: Writer String ()
+    go = do
+      let indentSpaces = 2
+      let indent s = replicate indentSpaces ' ' ++ s
+
+      tell $ "data " ++ capFirst name
+      forM_ tyParams $ \(TyParam tyParam) -> do
+        tell " "
+        tell tyParam
+      newline
+      line $ indent $ "= Mk" ++ capFirst name
+      tell $ indent "{"
+      iforM_ members $ \i member -> do
+        let prefix = if i == 0 then " " else indent ", "
+        line $ prefix ++ member ^. field @"name" ++ " :: " ++ haskellType (member ^. field @"typ")
+      line $ indent "}"
+      forM_ methods $ \method -> do
+        newline
+        line $ haskellMethod method
+
+    haskellType :: Type -> String
+    haskellType = \case
+      TyBasic (TypeName s) -> s
+      _ -> error "TODO"
+
+    haskellMethod :: Method -> String
+    haskellMethod = error "TODO"
+
+    line :: Monad m => String -> WriterT String m ()
+    line s = tell (s ++ "\n")
+
+    newline :: Monad m => WriterT String m ()
+    newline = line ""
+
 data DataStructure
   = DataStructure
-    [TyParam]
-    [Member]
-    [Method]
+    { name :: String
+    , tyParams :: [TyParam]
+    , members :: [Member]
+    , methods :: [Method]
+    }
 
 newtype TyParam = TyParam String
 
 data Member
   = Member
-    { _memberName :: String
-    , _memberType :: Type
+    { name :: String
+    , typ :: Type
     }
+  deriving stock (Generic)
 
 data Type
   = TyBasic   TypeName
@@ -99,9 +166,9 @@ data Type
 
 data Method
   = Method
-    { _methodName :: VarName
-    , _methodArgs :: [(VarName, Type)]
-    , _methodBody :: [Action]
+    { name :: VarName
+    , args :: [(VarName, Type)]
+    , body :: [Action]
     }
 
 data Action
@@ -151,6 +218,13 @@ data Action
 
 newtype TypeName = TypeName String
 newtype VarName = VarName String
+
+--------------------------------------------------------------------------------
+
+capFirst :: String -> String
+capFirst = \case
+  [] -> []
+  (c : cs) -> Char.toUpper c : cs
 
 --------------------------------------------------------------------------------
 
