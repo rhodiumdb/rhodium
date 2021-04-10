@@ -5,8 +5,10 @@
   , DeriveTraversable
   , DerivingStrategies
   , DuplicateRecordFields
+  , GeneralizedNewtypeDeriving
   , ImportQualifiedPost
   , LambdaCase
+  , OverloadedStrings
   , PackageImports
   , RecordWildCards
   , ScopedTypeVariables
@@ -22,6 +24,7 @@ import "base" Data.Data (Data)
 import "base" Data.List qualified as List
 import "base" GHC.Generics (Generic, Generic1)
 import "base" Numeric.Natural
+import "base" Data.String (IsString)
 import "containers" Data.Map.Strict (Map)
 import "containers" Data.Map.Strict qualified as Map
 import "containers" Data.Set (Set)
@@ -97,21 +100,37 @@ test = do
               [ Member "x" (TyBasic (TypeName "a"))
               , Member "y" (TyBasic (TypeName "b"))
               ]
-          , methods = []
+          , methods =
+              [ Method "setFst"
+                  [ ("x", TyBasic (TypeName "a"))
+                  ]
+                  [ CreateHashMap "h"
+                  , InsertHashMap "h" "foo" "1"
+                  , InsertHashMap "h" "bar" "2"
+                  , IterateOverHashMap "h"
+                    $ \k v ->
+                    [ DeleteHashMap "h" k
+                    , InsertHashMap "h" k v
+                    , IterateOverHashMap "h"
+                      $ \k' v' ->
+                      [ DeleteHashMap "h" k'
+                      , InsertHashMap "h" k' v'
+                      ]
+                    ]
+                  , LookupHashMap "result" "h" "foo"
+                  ]
+              ]
           }
         ]
   mapM_ (putStrLn . toHaskell) ds
 
 toHaskell :: DataStructure -> String
-toHaskell DataStructure{..} = execWriter go
+toHaskell d@DataStructure{..} = execWriter go
   where
     go :: Writer String ()
     go = do
-      let indentSpaces = 2
-      let indent s = replicate indentSpaces ' ' ++ s
-
       tell $ "data " ++ capFirst name
-      forM_ tyParams $ \(TyParam tyParam) -> do
+      forM_ (TyParam "s" : tyParams) $ \(TyParam tyParam) -> do
         tell " "
         tell tyParam
       newline
@@ -131,13 +150,65 @@ toHaskell DataStructure{..} = execWriter go
       _ -> error "TODO"
 
     haskellMethod :: Method -> String
-    haskellMethod = error "TODO"
+    haskellMethod Method{..} = execWriter go'
+      where
+        go' :: Writer String ()
+        go' = do
+          tell $ getVarName name ++ " :: "
+          let typsig = d ^. field @"name"
+                ++ " s "
+                ++ List.intercalate " "
+                     (map getTyParam tyParams)
+                ++ " -> "
+                ++ List.intercalate " -> "
+                     (map (haskellType . snd) args)
+                ++ " -> ST s ()"
+          line typsig
+          tell $ getVarName name
+          tell " ds"
+          forM_ args $ \(VarName bndr, _) -> do
+            tell $ " " ++ bndr
+          line " = do"
+          forM_ body $ \action -> do
+            haskellAction 0 action
+          line $ indent $ "pure ()"
+
+    haskellAction :: Int -> Action -> Writer String ()
+    haskellAction i = \case
+      AssignConstant (VarName assignTo) c -> do
+        line $ assignTo ++ " <- newMutVar " ++ c
+      IndexRow (VarName assignTo) (VarName row) index -> do
+        pure ()
+      CreateHashMap (VarName hmap) -> do
+        line $ indent $ hmap ++ " <- H.new"
+      LookupHashMap (VarName result) (VarName hmap) (VarName key) -> do
+        line $ indent $ result ++ " <- fromJust <$> " ++ "H.lookup " ++ hmap ++ " " ++ key
+      InsertHashMap (VarName hmap) (VarName key) (VarName value) -> do
+        line $ indent $ "H.insert " ++ List.intercalate " " [hmap, key, value]
+      DeleteHashMap (VarName hmap) (VarName key) -> do
+        line $ indent $ "H.delete " ++ List.intercalate " " [hmap, key]
+      IterateOverHashMap (VarName hmap) loop -> do
+        let k = "k" ++ show i
+        let v = "v" ++ show i
+        let actions = loop (VarName k) (VarName v)
+
+        line $ indent $ "flip H.mapM_ " ++ hmap ++ " $ \\(" ++ k ++ ", " ++ v ++ ") -> do"
+        line $ indent $ execWriter $ do
+          forM_ actions $ \action -> do
+            haskellAction (i + 1) action
 
     line :: Monad m => String -> WriterT String m ()
     line s = tell (s ++ "\n")
 
     newline :: Monad m => WriterT String m ()
     newline = line ""
+
+
+indentSpaces :: Int
+indentSpaces = 2
+
+indent :: String -> String
+indent = List.intercalate "\n" . map (replicate indentSpaces ' ' ++) . lines
 
 data DataStructure
   = DataStructure
@@ -146,8 +217,9 @@ data DataStructure
     , members :: [Member]
     , methods :: [Method]
     }
+  deriving stock (Generic)
 
-newtype TyParam = TyParam String
+newtype TyParam = TyParam { getTyParam :: String }
 
 data Member
   = Member
@@ -172,10 +244,9 @@ data Method
     }
 
 data Action
-  = Temp
-  | AssignConstant
+  = AssignConstant
     VarName  -- ^ variable to assign to
-    Constant -- ^ constant to assign
+    String -- ^ constant to assign
   | IndexRow
     VarName -- ^ variable to assign to
     VarName -- ^ row to index into
@@ -191,10 +262,14 @@ data Action
     VarName -- ^ value to delete
   | IterateOverHashSet
     VarName             -- ^ hashset to loop over
-    (VarName -> Action) -- ^ body of loop
+    (VarName -> [Action]) -- ^ body of loop
 
   | CreateHashMap
     VarName -- ^ hashmap to create
+  | LookupHashMap
+    VarName -- ^ where to store the result
+    VarName -- ^ hashmap to query
+    VarName -- ^ key
   | InsertHashMap
     VarName -- ^ hashmap to modify
     VarName -- ^ key
@@ -204,7 +279,7 @@ data Action
     VarName -- ^ key to delete
   | IterateOverHashMap
     VarName                        -- ^ hashmap to loop over
-    (VarName -> VarName -> Action) -- ^ body of loop
+    (VarName -> VarName -> [Action]) -- ^ body of loop
 
   | CreateTrie
     VarName -- ^ trie to create
@@ -217,7 +292,8 @@ data Action
     VarName -- ^ key (string)
 
 newtype TypeName = TypeName String
-newtype VarName = VarName String
+newtype VarName = VarName { getVarName :: String }
+  deriving newtype (IsString)
 
 --------------------------------------------------------------------------------
 
