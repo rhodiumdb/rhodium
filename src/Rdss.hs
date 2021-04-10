@@ -37,8 +37,9 @@ data Constant
   | ConstantBitString [Bool]
   deriving stock (Eq, Ord, Show, Generic, Data)
 
+-- invariant: must have number of arguments equal to number of columns in the table
 data Function rel
-  = Function -- invariant: must have number of arguments equal to number of columns in the table
+  = Function
       String -- ^ name of function in scope
   deriving stock (Eq, Ord, Show, Generic)
   deriving stock (Functor, Foldable, Traversable)
@@ -49,12 +50,12 @@ data Viewed rel
   deriving stock (Functor, Foldable, Traversable)
 
 data Predicate rel
-  = PredicateAnd (Predicate rel) (Predicate rel)
-  | PredicateOr (Predicate rel) (Predicate rel)
-  | PredicateNot (Predicate rel)
-  | PredicateLike Attr String
-  | PredicateLT Attr Int
-  | PredicateEQ Attr Int
+  = PredicateAnd  (Predicate rel) (Predicate rel)
+  | PredicateOr   (Predicate rel) (Predicate rel)
+  | PredicateNot  (Predicate rel)
+  | PredicateLike Attr            String
+  | PredicateLT   Attr            Int
+  | PredicateEQ   Attr            Int
   deriving stock (Eq, Ord, Show, Generic)
   deriving stock (Functor, Foldable, Traversable)
 
@@ -136,7 +137,7 @@ data Action
     VarName -- ^ key to delete
   | IterateOverHashMap
     VarName                        -- ^ hashmap to loop over
-    ((VarName, VarName) -> Action) -- ^ body of loop
+    (VarName -> VarName -> Action) -- ^ body of loop
 
   | CreateTrie
     VarName -- ^ trie to create
