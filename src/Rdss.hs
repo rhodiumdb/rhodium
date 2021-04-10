@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StrictData          #-}
 
 module Rdss where
 
@@ -28,6 +29,8 @@ type Attr = Int
 
 type AttrPermutation = [Attr]
 
+type AttrPartialPermutation = [Maybe Attr]
+
 data Constant
   = ConstantInt Int
   | ConstantBool Bool
@@ -37,9 +40,11 @@ data Constant
 data Function rel
   = Function -- invariant: must have number of arguments equal to number of columns in the table
       String -- ^ name of function in scope
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Functor, Foldable, Traversable)
 
 data Viewed rel
-  = Viewed ![Maybe Attr] !rel
+  = Viewed AttrPartialPermutation rel
   deriving stock (Eq, Ord, Show, Generic)
   deriving stock (Functor, Foldable, Traversable)
 
@@ -50,6 +55,8 @@ data Predicate rel
   | PredicateLike Attr String
   | PredicateLT Attr Int
   | PredicateEQ Attr Int
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving stock (Functor, Foldable, Traversable)
 
 --------------------------------------------------------------------------------
 
@@ -69,80 +76,80 @@ data RelAlgebra rel
 
 data DataStructure
   = DataStructure
-    ![TyParam]
-    ![Member]
-    ![Method]
+    [TyParam]
+    [Member]
+    [Method]
 
-newtype TyParam = TyParam Text
+newtype TyParam = TyParam String
 
 data Member
   = Member
-    { _memberName :: !Text
-    , _memberType :: !Type
+    { _memberName :: String
+    , _memberType :: Type
     }
 
 data Type
-  = TyBasic   !TypeName
-  | TyRow     ![Type]
-  | TyHashSet !Type
-  | TyHashMap !Type !Type
-  | TyTrie    !Type !Type
-  | TyVector  !Type
+  = TyBasic   TypeName
+  | TyRow     [Type]
+  | TyHashSet Type
+  | TyHashMap Type Type
+  | TyTrie    Type Type
+  | TyVector  Type
 
 data Method
   = Method
-    { _methodName :: !VarName
-    , _methodArgs :: ![(VarName, Type)]
-    , _methodBody :: ![Action]
+    { _methodName :: VarName
+    , _methodArgs :: [(VarName, Type)]
+    , _methodBody :: [Action]
     }
 
 data Action
   = Temp
   | AssignConstant
-    !VarName  -- ^ variable to assign to
-    !Constant -- ^ constant to assign
+    VarName  -- ^ variable to assign to
+    Constant -- ^ constant to assign
   | IndexRow
-    !VarName -- ^ variable to assign to
-    !VarName -- ^ row to index into
-    !Natural -- ^ index to use
+    VarName -- ^ variable to assign to
+    VarName -- ^ row to index into
+    Natural -- ^ index to use
 
   | CreateHashSet
-    !VarName -- ^ hashset to create
+    VarName -- ^ hashset to create
   | InsertHashSet
-    !VarName -- ^ hashset to modify
-    !VarName -- ^ value to insert
+    VarName -- ^ hashset to modify
+    VarName -- ^ value to insert
   | DeleteHashSet
-    !VarName -- ^ hashset to modify
-    !VarName -- ^ value to delete
+    VarName -- ^ hashset to modify
+    VarName -- ^ value to delete
   | IterateOverHashSet
-    !VarName             -- ^ hashset to loop over
-    !(VarName -> Action) -- ^ body of loop
+    VarName             -- ^ hashset to loop over
+    (VarName -> Action) -- ^ body of loop
 
   | CreateHashMap
-    !VarName -- ^ hashmap to create
+    VarName -- ^ hashmap to create
   | InsertHashMap
-    !VarName -- ^ hashmap to modify
-    !VarName -- ^ key
-    !VarName -- ^ value
+    VarName -- ^ hashmap to modify
+    VarName -- ^ key
+    VarName -- ^ value
   | DeleteHashMap
-    !VarName -- ^ hashmap to modify
-    !VarName -- ^ key to delete
+    VarName -- ^ hashmap to modify
+    VarName -- ^ key to delete
   | IterateOverHashMap
-    !VarName                        -- ^ hashmap to loop over
-    !((VarName, VarName) -> Action) -- ^ body of loop
+    VarName                        -- ^ hashmap to loop over
+    ((VarName, VarName) -> Action) -- ^ body of loop
 
   | CreateTrie
-    !VarName -- ^ trie to create
+    VarName -- ^ trie to create
   | InsertTrie
-    !VarName -- ^ trie to modify
-    !VarName -- ^ key (string)
-    !VarName -- ^ value
+    VarName -- ^ trie to modify
+    VarName -- ^ key (string)
+    VarName -- ^ value
   | DeleteTrie
-    !VarName -- ^ trie to modify
-    !VarName -- ^ key (string)
+    VarName -- ^ trie to modify
+    VarName -- ^ key (string)
 
-newtype TypeName = TypeName Text
-newtype VarName = VarName Text
+newtype TypeName = TypeName String
+newtype VarName = VarName String
 
 --------------------------------------------------------------------------------
 
