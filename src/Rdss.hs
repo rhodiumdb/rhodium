@@ -97,7 +97,12 @@ testRel = synthesize
 synthesize :: [(Rel, RelAlgebra Rel)] -> DataStructure
 synthesize = snd . flip execState (0, initialD) . mapM_ go
   where
-    initialD = DataStructure "Empty" [] [] [Method "insert0" [] [], Method "insert1" [] []]
+    initialD = DataStructure "Empty"
+      []
+      []
+      [ Method "insert0" [("r", TyRow [TyInt])] []
+      , Method "insert1" [("r", TyRow [TyInt])] []
+      ]
 
     freshName :: State (Int, a) VarName
     freshName = do
@@ -111,6 +116,8 @@ synthesize = snd . flip execState (0, initialD) . mapM_ go
         Not v -> do
           pure ()
         Join attrs vx vy -> do
+          let rx = vx ^. field @"rel"
+          let ry = vy ^. field @"rel"
           pure ()
         Union vx vy -> do
           let rx = vx ^. field @"rel"
@@ -151,7 +158,7 @@ synthesize = snd . flip execState (0, initialD) . mapM_ go
       result <- freshName
       indices <- forM inverted $ \attr -> do
         n <- freshName
-        pure (n, (IndexRow n input (fromIntegral attr)))
+        pure (n, (IndexRow n input (fromIntegral attr) (length perm == 1)))
       let creation = CreateRow result (map fst indices)
       pure (result, (map snd indices ++ [creation]))
       where
@@ -204,7 +211,7 @@ test = do
                     ]
                   , LookupHashMap "result" "h" "foo"
                   , CreateRow "testRow" ["x", "y", "z"]
-                  , IndexRow "fromRow" "testRow" 1
+                  , IndexRow "fromRow" "testRow" 1 False
                   ]
               ]
           }
@@ -235,6 +242,10 @@ toHaskell d@DataStructure{..} = execWriter go
     haskellType :: Type -> String
     haskellType = \case
       TyBasic (TypeName s) -> s
+      TyInt -> "Int"
+      TyRow [] -> "()"
+      TyRow [x] -> haskellType x
+      TyRow xs -> "(" ++ List.intercalate ", " (map haskellType xs) ++ ")"
       _ -> error "TODO"
 
     haskellMethod :: Method -> String
@@ -245,9 +256,8 @@ toHaskell d@DataStructure{..} = execWriter go
           tell $ getVarName name ++ " :: "
           let typsig = d ^. field @"name"
                 ++ " s "
-                ++ List.intercalate " "
-                     (map getTyParam tyParams)
-                ++ " -> "
+                ++ concatMap ((++ " ") . getTyParam) tyParams
+                ++ "-> "
                 ++ List.intercalate " -> "
                      (map (haskellType . snd) args)
                 ++ " -> ST s ()"
@@ -269,8 +279,12 @@ toHaskell d@DataStructure{..} = execWriter go
         line $ indent $ f ++ " " ++ List.intercalate " " (map getVarName args)
       CreateRow (VarName row) elements -> do
         line $ indent $ "let " ++ row ++ " = (" ++ List.intercalate ", " (map getVarName elements) ++ ")"
-      IndexRow (VarName assignTo) (VarName row) index -> do
-        line $ indent $ "let " ++ assignTo ++ " = " ++ row ++ " ^. _" ++ show (index + 1)
+      IndexRow (VarName assignTo) (VarName row) index hasSize1 -> do
+        if hasSize1
+        then do
+          line $ indent $ "let " ++ assignTo ++ " = " ++ row
+        else do
+          line $ indent $ "let " ++ assignTo ++ " = " ++ row ++ " ^. _" ++ show (index + 1)
       CreateHashMap (VarName hmap) -> do
         line $ indent $ hmap ++ " <- H.new"
       LookupHashMap (VarName result) (VarName hmap) (VarName key) -> do
@@ -321,7 +335,8 @@ data Member
   deriving stock (Generic)
 
 data Type
-  = TyBasic   TypeName
+  = TyInt
+  | TyBasic   TypeName
   | TyRow     [Type]
   | TyHashSet Type
   | TyHashMap Type Type
@@ -347,6 +362,7 @@ data Action
     VarName -- ^ variable to assign to
     VarName -- ^ row to index into
     Natural -- ^ index to use
+    Bool -- ^ whether the row has size 1
   | Invoke
     VarName -- ^ name of method
     [VarName] -- ^ arguments
