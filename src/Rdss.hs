@@ -97,12 +97,10 @@ testRel = synthesize
 synthesize :: [(Rel, RelAlgebra Rel)] -> DataStructure
 synthesize = snd . flip execState (0, initialD) . mapM_ go
   where
-    initialD = DataStructure "Empty"
+    initialD = DataStructure "Initial"
       []
       []
-      [ Method "insert0" [("r", TyRow [TyInt])] []
-      , Method "insert1" [("r", TyRow [TyInt])] []
-      ]
+      []
 
     freshName :: State (Int, a) VarName
     freshName = do
@@ -110,8 +108,48 @@ synthesize = snd . flip execState (0, initialD) . mapM_ go
       Lens.modifying Lens._1 (+1)
       pure $ VarName $ "x" ++ show i
 
+    inferSize :: RelAlgebra Rel -> Int
+    inferSize = \case
+      Not v -> inferSize (View v)
+      Join a vx vy -> inferSize (View vx) + inferSize (View vy) - length a
+      Union vx vy ->
+        let sx = inferSize (View vx)
+            sy = inferSize (View vy)
+        in if sx == sy
+           then sx
+           else error "inferSize: Union: invariant violated"
+      Difference vx vy -> inferSize (Union vx vy)
+      Select _ v -> inferSize (View v)
+      Map _ v -> inferSize (View v)
+      View v -> length (catMaybes (attrPartialPermutation v))
+
+    -- for constructors with one argument
+    inferSizeMono :: RelAlgebra Rel -> Int
+    inferSizeMono = \case
+      Not v -> inferSizeMono (View v)
+      Select _ v -> inferSizeMono (View v)
+      Map _ v -> inferSizeMono (View v)
+      View v -> length (attrPartialPermutation v)
+      _ -> error "TODO"
+
+    -- for constructors with two arguments
+    inferSizeTwo :: RelAlgebra Rel -> (Int, Int)
+    inferSizeTwo = \case
+      Join a vx vy -> (length (attrPartialPermutation vx), length (attrPartialPermutation vy))
+      Union vx vy -> (length (attrPartialPermutation vx), length (attrPartialPermutation vy))
+      Difference vx vy -> (length (attrPartialPermutation vx), length (attrPartialPermutation vy))
+      _ -> error "TODO"
+
     go :: (Rel, RelAlgebra Rel) -> State (Int, DataStructure) ()
     go (lhs, rhs) = do
+      let returnType = TyRow (replicate (inferSize rhs) TyInt)
+      let cache = "cache" ++ show (getRel lhs)
+      Lens.modifying
+        ( Lens._2
+        . field @"members"
+        )
+        ( ++ [Member cache (TyHashMap returnType (TyRow []))]
+        )
       case rhs of
         Not v -> do
           pure ()
@@ -122,6 +160,25 @@ synthesize = snd . flip execState (0, initialD) . mapM_ go
         Union vx vy -> do
           let rx = vx ^. field @"rel"
           let ry = vy ^. field @"rel"
+          let dontDuplicateNames :: Method -> [Method] -> [Method]
+              dontDuplicateNames m ms
+                | any ((== m ^. field @"name") . (^. field @"name")) ms = ms
+                | otherwise = ms ++ [m]
+          ptr <- freshName
+          Lens.modifying
+            ( Lens._2
+            . field @"methods"
+            )
+            ( dontDuplicateNames ( Method (insertMethod lhs)
+                                     [("r", returnType)
+                                     ]
+                                     [ GetMember ptr (VarName cache)
+                                     , InsertHashMap ptr "r" (VarName "()")
+                                     ]
+                                 )
+            . dontDuplicateNames (Method (insertMethod ry) [("r", TyRow (replicate (length (attrPartialPermutation vy)) TyInt))] [])
+            . dontDuplicateNames (Method (insertMethod rx) [("r", TyRow (replicate (length (attrPartialPermutation vx)) TyInt))] [])
+            )
           (resultx, gvx) <- genView vx "r"
           Lens.modifying
             (methodLens (insertMethod rx))
@@ -246,6 +303,7 @@ toHaskell d@DataStructure{..} = execWriter go
       TyRow [] -> "()"
       TyRow [x] -> haskellType x
       TyRow xs -> "(" ++ List.intercalate ", " (map haskellType xs) ++ ")"
+      TyHashMap k v -> "HashTable s " ++ haskellType k ++ " " ++ haskellType v
       _ -> error "TODO"
 
     haskellMethod :: Method -> String
@@ -273,6 +331,8 @@ toHaskell d@DataStructure{..} = execWriter go
 
     haskellAction :: Int -> Action -> Writer String ()
     haskellAction i = \case
+      GetMember (VarName pointer) (VarName nameOfField) -> do
+        line $ indent $ "let " ++ pointer ++ " = " ++ nameOfField ++ " ds"
       AssignConstant (VarName assignTo) c -> do
         line $ indent $ assignTo ++ " <- newMutVar " ++ c
       Invoke (VarName f) args -> do
@@ -352,7 +412,10 @@ data Method
   deriving stock (Generic)
 
 data Action
-  = AssignConstant
+  = GetMember
+    VarName -- ^ name of pointer
+    VarName -- ^ name of struct field
+  | AssignConstant
     VarName  -- ^ variable to assign to
     String -- ^ constant to assign
   | CreateRow
