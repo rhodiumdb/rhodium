@@ -3,9 +3,13 @@
 
 #include <cstdint>
 #include <functional>
+#include <sstream>
 #include <string>
 #include <vector>
 
+#include <absl/memory/memory.h>
+#include <absl/strings/str_cat.h>
+#include <absl/strings/str_join.h>
 #include <absl/types/optional.h>
 
 namespace rdss {
@@ -112,46 +116,103 @@ struct RelationView : public Relation {
 
 struct TypeParameter {
     std::string name;
+
+    TypeParameter(std::string name) : name(name) {}
+    TypeParameter(const char* name) : name(name) {}
+
+    std::string ToCpp() const { return this->name; }
 };
 
 struct VarName {
     std::string name;
+
+    VarName(std::string name) : name(name) {}
+    VarName(const char* name) : name(name) {}
+
+    std::string ToCpp() const { return this->name; }
 };
 
 struct TypeName {
     std::string name;
+
+    TypeName(std::string name) : name(name) {}
+    TypeName(const char* name) : name(name) {}
+
+    std::string ToCpp() const { return this->name; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct Type {};
+struct Type {
+    virtual std::string ToCpp() const = 0;
+};
 
-struct TypeInt : public Type {};
+struct TypeInt : public Type {
+    std::string ToCpp() const override {
+        return "int32_t";
+    }
+};
 
 struct TypeBasic : public Type {
     TypeName name;
+
+    std::string ToCpp() const override {
+        return this->name.ToCpp();
+    }
 };
 
 struct TypeRow : public Type {
     std::vector<Type> elements;
+
+    std::string ToCpp() const override {
+        std::stringstream ss;
+        ss << "std::tuple<";
+        std::vector<std::string> types;
+        for (const auto& type : this->elements) {
+            types.push_back(type.ToCpp());
+        }
+        ss << absl::StrJoin(types, ", ") << ">";
+        return ss.str();
+    }
 };
 
 struct TypeHashSet : public Type {
-    Type element;
+    std::unique_ptr<Type> element;
+
+    std::string ToCpp() const override {
+        return absl::StrCat("absl::flat_hash_set<",
+                            this->element->ToCpp(), ">");
+    }
 };
 
 struct TypeHashMap : public Type {
-    Type key;
-    Type value;
+    std::unique_ptr<Type> key;
+    std::unique_ptr<Type> value;
+
+    std::string ToCpp() const override {
+        return absl::StrCat("absl::flat_hash_map<",
+                            this->key->ToCpp(), ", ",
+                            this->value->ToCpp(), ">");
+    }
 };
 
 struct TypeTrie : public Type {
-    Type key;
-    Type value;
+    std::unique_ptr<Type> key;
+    std::unique_ptr<Type> value;
+
+    std::string ToCpp() const override {
+        return absl::StrCat("trie<",
+                            this->key->ToCpp(), ", ",
+                            this->value->ToCpp(), ">");
+    }
 };
 
 struct TypeVector : public Type {
-    Type element;
+    std::unique_ptr<Type> element;
+
+    std::string ToCpp() const override {
+        return absl::StrCat("std::vector<", this->element->ToCpp(), ">");
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,15 +304,21 @@ struct ActionDeleteTrie : public Action {
 
 struct Member {
     VarName name;
-    Type type;
+    std::unique_ptr<Type> type;
+
+    std::string ToCpp() const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Method {
     VarName name;
-    std::vector<std::pair<VarName, Type>> arguments;
+    std::vector<std::pair<VarName, std::unique_ptr<Type>>> arguments;
     std::vector<Action> body;
+
+    explicit Method(VarName name) : name(name) {}
+
+    std::string ToCpp() const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -261,6 +328,10 @@ struct DataStructure {
     std::vector<TypeParameter> type_parameters;
     std::vector<Member> members;
     std::vector<Method> methods;
+
+    explicit DataStructure(std::string name) : name(name) {}
+
+    std::string ToCpp() const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
