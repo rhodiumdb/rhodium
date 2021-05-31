@@ -12,3 +12,17 @@ target_link_libraries(rdss
   absl::statusor
   z3)
 install(TARGETS rdss DESTINATION bin)
+
+enable_testing()
+add_executable(
+  fhd_tests
+  test/fhd_tests.cpp
+)
+target_link_libraries(
+  fhd_tests
+  gtest
+  gtest_main
+)
+
+include(GoogleTest)
+gtest_discover_tests(fhd_tests)
