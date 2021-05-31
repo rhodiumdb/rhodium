@@ -8,7 +8,7 @@ stdenv.mkDerivation {
 
   src = lib.cleanSourceWith {
     filter = name: type: !(lib.hasPrefix "build" (baseNameOf (toString name)));
-    src = lib.cleanSource ./.;
+    src = lib.cleanSource ./..;
   };
 
   buildInputs = [ abseil-cpp gtest z3 ];
