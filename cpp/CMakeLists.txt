@@ -5,5 +5,10 @@ find_package(absl REQUIRED)
 add_executable(rdss
   src/rdss.cpp
   src/ast.cpp)
-target_link_libraries(rdss absl::strings absl::status absl::statusor)
+target_link_libraries(rdss
+  absl::hash
+  absl::strings
+  absl::status
+  absl::statusor
+  z3)
 install(TARGETS rdss DESTINATION bin)

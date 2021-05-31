@@ -1,4 +1,4 @@
-{ stdenv, lib, cmake, abseil-cpp }:
+{ stdenv, lib, cmake, abseil-cpp, z3 }:
 
 stdenv.mkDerivation {
   pname = "rdss";
@@ -9,7 +9,7 @@ stdenv.mkDerivation {
     src = lib.cleanSource ./.;
   };
 
-  buildInputs = [ abseil-cpp ];
+  buildInputs = [ abseil-cpp z3 ];
 
   nativeBuildInputs = [ cmake ];
 }
