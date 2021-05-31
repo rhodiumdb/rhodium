@@ -9,5 +9,7 @@ stdenv.mkDerivation {
     src = lib.cleanSource ./.;
   };
 
-  buildInputs = [ cmake abseil-cpp ];
+  buildInputs = [ abseil-cpp ];
+
+  nativeBuildInputs = [ cmake ];
 }

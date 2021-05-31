@@ -6,3 +6,4 @@ add_executable(rdss
   src/rdss.cpp
   src/ast.cpp)
 target_link_libraries(rdss absl::strings absl::status absl::statusor)
+install(TARGETS rdss DESTINATION bin)
