@@ -20,6 +20,8 @@ add_executable(
 )
 target_link_libraries(
   fhd_tests
+  absl::hash
+  absl::strings
   gtest
   gtest_main
 )
