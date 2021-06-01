@@ -217,21 +217,35 @@ struct TypeVector : public Type {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-struct Action {};
+struct Action {
+    virtual std::string ToCpp() const = 0;
+};
 
 struct ActionGetMember : public Action {
     VarName pointer;
     VarName struct_field;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionAssignConstant : public Action {
     VarName variable;
     std::string constant;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionCreateRow : public Action {
     VarName variable;
     std::vector<VarName> elements;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionIndexRow : public Action {
@@ -239,65 +253,117 @@ struct ActionIndexRow : public Action {
     VarName row_to_index;
     uint32_t index;
     bool has_size_1;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionInvoke : public Action {
     VarName method;
     std::vector<VarName> arguments;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionCreateHashSet : public Action {
     VarName variable;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionInsertHashSet : public Action {
     VarName hash_set;
     VarName value_to_insert;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionDeleteHashSet : public Action {
     VarName hash_set;
     VarName value_to_delete;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionIterateOverHashSet : public Action {
     VarName hash_set;
     std::function<std::vector<Action>(VarName)> body;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionCreateHashMap : public Action {
     VarName variable;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionInsertHashMap : public Action {
     VarName hash_map;
     VarName key_to_insert;
     VarName value_to_insert;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionDeleteHashMap : public Action {
     VarName hash_map;
     VarName key_to_delete;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionIterateOverHashMap : public Action {
     VarName hash_map;
     std::function<std::vector<Action>(VarName, VarName)> body;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionCreateTrie : public Action {
     VarName variable;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionInsertTrie : public Action {
     VarName trie;
     VarName key_to_insert;
     VarName value_to_insert;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 struct ActionDeleteTrie : public Action {
     VarName trie;
     VarName key_to_delete;
+
+    std::string ToCpp() const {
+        return "";
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -25,8 +25,37 @@ std::string Member::ToCpp() const {
     return absl::StrCat(this->type->ToCpp(), " ", this->name.ToCpp(), ";\n");
 }
 
+/*
+<type> <name>(<arg1>, <arg2>, ..., <argN>)
+*/
 std::string Method::ToCpp() const {
-    return "";
+    std::vector<absl::string_view> args_vec;
+    for (int32_t i = 0; i < this->arguments.size(); i++) {
+        args_vec[i] = absl::StrCat(
+            this->arguments[i].first.ToCpp(),
+            " ",
+            this->arguments[i].second->ToCpp()
+        );
+    }
+
+    auto args = absl::StrJoin(args_vec, ", ");
+
+    std::vector<absl::string_view> body_vec;
+    for (int32_t i = 0; i < this->body.size(); i++) {
+        body_vec[i] = Indent(this->body[i].ToCpp());
+    }
+
+    auto body = absl::StrJoin(body_vec, ";\n");
+
+    return absl::StrCat(
+        "void ",
+        this->name.ToCpp(),
+        " (",
+        args,
+        ") { ",
+        body,
+        "}"
+    );
 }
 
 std::string DataStructure::ToCpp() const {
