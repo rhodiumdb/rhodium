@@ -18,49 +18,44 @@ void TestGHD() {
     }
 
     auto e1 = graph.AddEdge();
-    assert(AddVertexToEdge(1, e1));
-    assert(AddVertexToEdge(2, e1));
-    assert(AddVertexToEdge(9, e1));
+    graph.AddVertexToEdge(1, e1);
+    graph.AddVertexToEdge(2, e1);
+    graph.AddVertexToEdge(9, e1);
 
     auto e2 = graph.AddEdge();
-    assert(AddVertexToEdge(2, e2));
-    assert(AddVertexToEdge(3, e2));
-    assert(AddVertexToEdge(10, e2));
+    graph.AddVertexToEdge(2, e2);
+    graph.AddVertexToEdge(3, e2);
+    graph.AddVertexToEdge(10, e2);
 
     auto e3 = graph.AddEdge();
-    assert(AddVertexToEdge(3, e3));
-    assert(AddVertexToEdge(4, e3));
+    graph.AddVertexToEdge(3, e3);
+    graph.AddVertexToEdge(4, e3);
 
     auto e4 = graph.AddEdge();
-    assert(AddVertexToEdge(4, e4));
-    assert(AddVertexToEdge(5, e4));
-    assert(AddVertexToEdge(9, e4));
+    graph.AddVertexToEdge(4, e4);
+    graph.AddVertexToEdge(5, e4);
+    graph.AddVertexToEdge(9, e4);
 
     auto e5 = graph.AddEdge();
-    assert(AddVertexToEdge(5, e5));
-    assert(AddVertexToEdge(6, e5));
-    assert(AddVertexToEdge(10, e5));
+    graph.AddVertexToEdge(5, e5);
+    graph.AddVertexToEdge(6, e5);
+    graph.AddVertexToEdge(10, e5);
 
     auto e6 = graph.AddEdge();
-    assert(AddVertexToEdge(6, e6));
-    assert(AddVertexToEdge(7, e6));
-    assert(AddVertexToEdge(9, e6));
+    graph.AddVertexToEdge(6, e6);
+    graph.AddVertexToEdge(7, e6);
+    graph.AddVertexToEdge(9, e6);
 
     auto e7 = graph.AddEdge();
-    assert(AddVertexToEdge(7, e7));
-    assert(AddVertexToEdge(8, e7));
-    assert(AddVertexToEdge(10, e7));
+    graph.AddVertexToEdge(7, e7);
+    graph.AddVertexToEdge(8, e7);
+    graph.AddVertexToEdge(10, e7);
 
     auto e8 = graph.AddEdge();
-    assert(AddVertexToEdge(1, e8));
-    assert(AddVertexToEdge(8, e8));
+    graph.AddVertexToEdge(1, e8);
+    graph.AddVertexToEdge(8, e8);
 
-    // for (Tree<absl::flat_hash_set<HyperedgeId>> ghd
-    //          : EnumerateGHDs(graph, graph.AllVertices())) {
-    //     std::cerr << "DEBUG: " << HypertreeWidth(ghd) << "\n";
-    // }
-
-    EnumerateGHDs(graph, 0);
+    ComputeFHW(graph, 0.0);
 }
 
 absl::Status RealMain() {

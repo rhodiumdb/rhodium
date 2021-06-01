@@ -123,7 +123,7 @@ struct Tree {
 };
 
 template<typename V>
-void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
+void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
     auto all_vertices = hypergraph.AllVertices();
     std::vector<V> vertices_vec(all_vertices.begin(), all_vertices.end());
     std::sort(vertices_vec.begin(), vertices_vec.end());
@@ -149,10 +149,7 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
     z3::solver s(c);
 
     absl::optional<z3::expr> o_star[num_vertices][num_vertices];
-    absl::optional<z3::expr> e_star[num_vertices][num_vertices];
     absl::optional<z3::expr> a[num_vertices][num_vertices];
-    absl::optional<z3::expr> b[num_vertices][num_vertices];
-    // absl::optional<z3::expr> p[num_vertices][num_vertices];
     absl::optional<z3::expr> w[num_vertices][num_edges];
 
     for (int32_t i = 0; i < num_vertices; i++) {
@@ -163,11 +160,6 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
                 std::string o_star_str = ss.str();
 
                 o_star[i][j] = c.bool_const(o_star_str.c_str());
-
-                std::string e_star_str = o_star_str;
-                e_star_str[0] = 'e';
-
-                e_star[i][j] = c.bool_const(e_star_str.c_str());
             }
 
             {
@@ -176,20 +168,6 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
                 std::string a_str = ss.str();
                 a[i][j] = c.bool_const(a_str.c_str());
             }
-
-            {
-                std::stringstream ss;
-                ss << "b_" << i << "_" << j;
-                std::string b_str = ss.str();
-                b[i][j] = c.bool_const(b_str.c_str());
-            }
-
-            // {
-            //     std::stringstream ss;
-            //     ss << "p_" << i << "_" << j;
-            //     std::string p_str = ss.str();
-            //     p[i][j] = c.bool_const(p_str.c_str());
-            // }
         }
     }
 
@@ -198,7 +176,7 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
             std::stringstream ss;
             ss << "w_" << i << "_" << e;
             std::string w_str = ss.str();
-            w[i][e] = c.int_const(w_str.c_str());
+            w[i][e] = c.real_const(w_str.c_str());
         }
     }
 
@@ -206,7 +184,6 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
         for (int32_t j = 0; j < num_vertices; j++) {
             if (j < i) {
                 o_star[i][j] = !o_star[j][i].value();
-                e_star[i][j] = e_star[j][i].value();
             }
         }
     }
@@ -214,87 +191,52 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
     for (int32_t i = 0; i < num_vertices; i++) {
         for (int32_t j = 0; j < num_vertices; j++) {
             for (int32_t k = 0; k < num_vertices; k++) {
-                if ((i != j) && (j != k) && (k != i)) {
-                    { // Transitivity for o_star
-                        s.add(!o_star[i][j].value()
-                              || !o_star[j][k].value()
-                              || o_star[i][k].value());
-                    }
-
-                    { // Transitivity for e_star
-                        s.add(!e_star[i][j].value()
-                              || !e_star[j][k].value()
-                              || e_star[i][k].value());
-                    }
-                }
-            }
-        }
-    }
-
-    for (int32_t i = 0; i < num_vertices; i++) {
-        for (int32_t j = 0; j < num_vertices; j++) {
-            if (i != j) {
-                // Ensure that ≺ is a topological ordering of D
-                s.add(!o_star[i][j].value() || !a[j][i].value());
-            }
-        }
-    }
-
-    for (int32_t i = 0; i < num_vertices; i++) {
-        // Constraints for bᵢⱼ
-        s.add(b[i][i].value());
-        for (int32_t j = 0; j < num_vertices; j++) {
-            if (i != j) {
-                s.add((a[i][j].value() || e_star[i][j].value())
-                      == b[i][j].value());
-            }
-        }
-    }
-
-    for (HyperedgeId edge : hypergraph.AllEdges()) {
-        auto vertices = hypergraph.VerticesInEdge(edge).value();
-        for (V x : vertices) {
-            for (V y : vertices) {
-                // Condition O1
-                int32_t i = vertex_to_int.at(x);
-                int32_t j = vertex_to_int.at(y);
-                if (i != j) {
-                    s.add(!o_star[i][j].value() || a[i][j].value());
-                }
-            }
-        }
-    }
-
-    for (int32_t i = 0; i < num_vertices; i++) {
-        for (int32_t j = 0; j < num_vertices; j++) {
-            if (i != j) {
-                // Condition O2
-                s.add(!o_star[i][j].value()
-                      || !e_star[i][j].value()
-                      || a[i][j].value());
-            }
-        }
-    }
-
-    for (int32_t i = 0; i < num_vertices; i++) {
-        for (int32_t j = 0; j < num_vertices; j++) {
-            for (int32_t k = 0; k < num_vertices; k++) {
-                if ((i != j) && (j != k) && (k != i)) {
-                    // Condition O3
-                    s.add(!o_star[j][k].value()
-                          || !a[i][j].value()
-                          || !a[i][k].value()
-                          || a[j][k].value());
-
-                    // Condition O4
+                if ((i != j) && (i != k) && (j != k)) {
                     s.add(!o_star[i][j].value()
                           || !o_star[j][k].value()
-                          || !e_star[i][j].value()
-                          || !a[j][k].value()
-                          || a[i][k].value());
+                          || o_star[i][k].value());
                 }
             }
         }
+    }
+
+    for (auto edge : edges_vec) {
+        for (auto x : hypergraph.VerticesInEdge(edge).value()) {
+            for (auto y : hypergraph.VerticesInEdge(edge).value()) {
+                auto i = vertex_to_int.at(x);
+                auto j = vertex_to_int.at(y);
+
+                if (i < j) {
+                  s.add(o_star[j][i].value() || a[i][j].value());
+                  s.add(o_star[i][j].value() || a[j][i].value());
+                }
+            }
+        }
+    }
+
+    for (int32_t i = 0; i < num_vertices; i++) {
+        for (int32_t j = 0; j < num_vertices; j++) {
+            for (int32_t k = 0; k < num_vertices; k++) {
+                if ((i != j) && (i != k) && (j < k)) {
+                    s.add(!a[i][j].value()
+                          || !a[i][k].value()
+                          || o_star[k][j].value()
+                          || a[j][k].value());
+                    s.add(!a[i][j].value()
+                          || !a[i][k].value()
+                          || o_star[j][k].value()
+                          || a[k][j].value());
+                    s.add(!a[i][j].value()
+                          || !a[i][k].value()
+                          || a[j][k].value()
+                          || a[k][j].value());
+                }
+            }
+        }
+    }
+
+    for (int32_t i = 0; i < num_vertices; i++) {
+        s.add(!a[i][i].value());
     }
 
     {
@@ -314,9 +256,6 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
                     }
                     if (sum) {
                         s.add(!a[i][j].value() || (sum.value() >= 1));
-                    }
-                    else {
-                        s.add(!a[i][j].value());
                     }
                 }
             }
@@ -346,10 +285,10 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
 
     switch(s.check()) {
     case z3::unsat:
-        std::cerr << "Graph had no GHD of width " << width << "\n"; break;
+        std::cerr << "Graph had no GHD\n"; break;
     case z3::sat:
         std::cerr
-            << "Graph had GHD of width " << width << "\n"
+            << "Graph had GHD\n"
             << "Model:\n" << s.get_model() << "\n";
         break;
     case z3::unknown:
