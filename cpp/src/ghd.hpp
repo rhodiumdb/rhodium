@@ -107,14 +107,6 @@ public:
         }
     }
 
-    void CollectGarbage() {
-        // FIXME
-    }
-
-    std::vector<Hypergraph> ConnectedComponents() const {
-        return std::vector<Hypergraph>();
-    }
-
 private:
     struct Hyperedge {
         absl::flat_hash_set<V> vertices;
@@ -129,33 +121,6 @@ struct Tree {
     V value;
     std::vector<Tree> children;
 };
-
-template<typename T>
-std::vector<std::vector<T>>
-AllSubsetsOfSize(int32_t i, const std::vector<T>& vec) {
-    return std::vector<std::vector<T>>(); // FIXME
-}
-
-template<typename T>
-absl::flat_hash_set<T> SetIntersection(const absl::flat_hash_set<T>& x,
-                                       const absl::flat_hash_set<T>& y) {
-    return absl::flat_hash_set<T>(); // FIXME
-}
-
-int32_t HypertreeWidth(const Tree<absl::flat_hash_set<HyperedgeId>>& tree) {
-    int32_t result = static_cast<int32_t>(tree.value.size());
-    std::vector<const Tree<absl::flat_hash_set<HyperedgeId>>*> active;
-    active.push_back(&tree);
-    while (active.empty()) {
-        auto t = active.back();
-        active.pop_back();
-        result = std::min(result, static_cast<int32_t>(t->value.size()));
-        for (const auto& child : t->children) {
-            active.push_back(&child);
-        }
-    }
-    return result;
-}
 
 template<typename V>
 void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
@@ -391,108 +356,6 @@ void EnumerateGHDs(const Hypergraph<V>& hypergraph, int32_t width) {
         std::cerr << "Graph was too confusing for Z3\n"; break;
     }
 }
-
-// template<typename V>
-// std::vector<Tree<absl::flat_hash_set<HyperedgeId>>>
-// EnumerateGHDs(const Hypergraph<V>& hypergraph,
-//               const absl::flat_hash_set<V>& attrs) {
-//     using Hypertree = Tree<absl::flat_hash_set<HyperedgeId>>;
-//     std::vector<Hypertree> result;
-//     for (int32_t i = 1; i < hypergraph.NumVertices(); i++) {
-//         for (const std::vector<HyperedgeId>& subset_vec
-//                  : AllSubsetsOfSize(i, hypergraph.AllEdges())) {
-//             absl::flat_hash_set<HyperedgeId>
-//                 subset(subset_vec.begin(), subset_vec.end());
-//
-//             // Define ε \ S
-//             absl::flat_hash_set<HyperedgeId> edges_minus_subset(
-//                 hypergraph.AllEdges().begin(),
-//                 hypergraph.AllEdges().end());
-//             for (HyperedgeId edge : subset) {
-//                 edges_minus_subset.erase(edge);
-//             }
-//
-//             // Define S.attributes
-//             absl::flat_hash_set<V> subset_attrs;
-//             for (HyperedgeId edge : subset) {
-//                 for (V vertex : hypergraph.VerticesInEdge(edge).value()) {
-//                     subset_attrs.insert(vertex);
-//                 }
-//             }
-//
-//             // Define H \ S
-//             Hypergraph graph_minus_subset = hypergraph;
-//             for (HyperedgeId edge : subset) {
-//                 graph_minus_subset.DeleteEdge(edge);
-//             }
-//             for (const V& vertex : subset_attrs) {
-//                 graph_minus_subset.DeleteVertex(vertex);
-//             }
-//
-//             // For any R ∈ ε \ S:
-//             //     If R.attributes ∩ attributes ⊈ S.attributes:
-//             //         return []
-//             for (HyperedgeId r : edges_minus_subset) {
-//                 auto r_attrs = hypergraph.VerticesInEdge(r).value();
-//                 for (V vertex : SetIntersection(r_attrs, attrs)) {
-//                     if (!subset_attrs.contains(vertex)) {
-//                         return std::vector<Hypertree>();
-//                     }
-//                 }
-//             }
-//
-//             // Find connected components in ε \ S, ignoring attributes in S
-//             // For every connected component Cᵢ:
-//             //     subtrees{Cᵢ} = enumerateGHDs(Cᵢ, S.attributes)
-//             std::vector<std::vector<Hypertree>> subtrees_c;
-//             for (const auto& cc : graph_minus_subset.ConnectedComponents()) {
-//                 subtrees_c.push_back(EnumerateGHDs(cc, subset_attrs));
-//             }
-//
-//             // subtrees = {{c₁, c₂, …} | each cᵢ ∈ subtrees{Cᵢ}}
-//             std::vector<Hypertree> subtrees;
-//             // for (const auto& subtree_c : subtrees_c) {
-//             //     for (const auto& subtree : subtree_c) {
-//             //         subtrees.push_back(subtree);
-//             //     }
-//             // }
-//
-//             for (int32_t j = 2; j < subtrees_c.size(); j++) {
-//                 for (const auto& subtree_subset
-//                          : AllSubsetsOfSize(j, subtrees_c)) {
-//                     subtrees.push_back(subtree_subset);
-//                 }
-//             }
-//
-//             // result = []
-//             // For each s in subtrees:
-//             //     result.append(S with s as children)
-//             // return result
-//             for (absl::flat_hash_set<std::vector<Hypertree>> s : subtrees) {
-//                 result.push_back(Hypertree { subset, s });
-//             }
-//         }
-//     }
-//     return result;
-// }
-
-// template<typename V>
-// struct Tree {
-//     V value;
-//     std::vector<Tree> children;
-// };
-//
-// template<typename V>
-// struct GeneralizedHypertreeDecomposition {
-//     using ProjectedAttr = absl::flat_hash_set<V>;
-//     using Bag = absl::flat_hash_set<ProjectedAttr>;
-//
-//     Tree<Bag> tree;
-//
-//     bool IsValid(const Hypergraph& hypergraph) {
-//         for (const auto& edge)
-//     }
-// };
 
 ////////////////////////////////////////////////////////////////////////////////
 
