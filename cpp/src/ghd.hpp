@@ -143,7 +143,7 @@ struct Tree {
 };
 
 template<typename V>
-void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
+void ComputeFHW(const Hypergraph<V>& hypergraph) {
     auto all_vertices = hypergraph.AllVertices();
     std::vector<V> vertices_vec(all_vertices.begin(), all_vertices.end());
     std::sort(vertices_vec.begin(), vertices_vec.end());
@@ -166,11 +166,23 @@ void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
     }
 
     z3::context c;
-    z3::solver s(c);
+    // z3::solver s(c);
+    z3::optimize s(c);
 
-    absl::optional<z3::expr> o_star[num_vertices][num_vertices];
-    absl::optional<z3::expr> a[num_vertices][num_vertices];
-    absl::optional<z3::expr> w[num_vertices][num_edges];
+    z3::expr m = c.real_const("m");
+
+    s.add(m >= 1);
+
+    struct optional_expr {
+        absl::optional<z3::expr> value_;
+        optional_expr() : value_() {}
+        optional_expr(const z3::expr& expr) : value_(expr) {}
+        const z3::expr& value() { return value_.value(); }
+    };
+
+    optional_expr o_star[num_vertices][num_vertices];
+    optional_expr a[num_vertices][num_vertices];
+    optional_expr w[num_vertices][num_edges];
 
     for (int32_t i = 0; i < num_vertices; i++) {
         for (int32_t j = 0; j < num_vertices; j++) {
@@ -213,25 +225,24 @@ void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
     for (int32_t i = 0; i < num_vertices; i++) {
         for (int32_t j = 0; j < num_vertices; j++) {
             for (int32_t k = 0; k < num_vertices; k++) {
-                if ((i != j) && (i != k) && (j != k)) {
-                    s.add(!o_star[i][j].value()
-                          || !o_star[j][k].value()
-                          || o_star[i][k].value());
-                }
+                if ((i == j) || (i == k) || (j == k)) { continue; }
+                s.add(!o_star[i][j].value()
+                      || !o_star[j][k].value()
+                      || o_star[i][k].value());
             }
         }
     }
 
     for (auto edge : edges_vec) {
-        for (auto x : hypergraph.VerticesInEdge(edge).value()) {
-            for (auto y : hypergraph.VerticesInEdge(edge).value()) {
+        absl::flat_hash_set<V> vs = hypergraph.VerticesInEdge(edge).value();
+        for (const auto& x : vs) {
+            for (const auto& y : vs) {
                 auto i = vertex_to_int.at(x);
                 auto j = vertex_to_int.at(y);
 
-                if (i < j) {
-                  s.add(o_star[j][i].value() || a[i][j].value());
-                  s.add(o_star[i][j].value() || a[j][i].value());
-                }
+                if (i >= j) { continue; }
+                s.add(o_star[j][i].value() || a[i][j].value());
+                s.add(o_star[i][j].value() || a[j][i].value());
             }
         }
     }
@@ -239,20 +250,19 @@ void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
     for (int32_t i = 0; i < num_vertices; i++) {
         for (int32_t j = 0; j < num_vertices; j++) {
             for (int32_t k = 0; k < num_vertices; k++) {
-                if ((i != j) && (i != k) && (j < k)) {
-                    s.add(!a[i][j].value()
-                          || !a[i][k].value()
-                          || o_star[k][j].value()
-                          || a[j][k].value());
-                    s.add(!a[i][j].value()
-                          || !a[i][k].value()
-                          || o_star[j][k].value()
-                          || a[k][j].value());
-                    s.add(!a[i][j].value()
-                          || !a[i][k].value()
-                          || a[j][k].value()
-                          || a[k][j].value());
-                }
+                if ((i == j) || (i == k) || (j >= k)) { continue; }
+                s.add(!a[i][j].value()
+                      || !a[i][k].value()
+                      || o_star[k][j].value()
+                      || a[j][k].value());
+                s.add(!a[i][j].value()
+                      || !a[i][k].value()
+                      || o_star[j][k].value()
+                      || a[k][j].value());
+                s.add(!a[i][j].value()
+                      || !a[i][k].value()
+                      || a[j][k].value()
+                      || a[k][j].value());
             }
         }
     }
@@ -262,24 +272,19 @@ void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
     }
 
     {
-        // Condition O5
-
         for (int32_t i = 0; i < num_vertices; i++) {
             for (int32_t j = 0; j < num_vertices; j++) {
-                if (i != j) {
-                    absl::optional<z3::expr> sum;
-                    for (int32_t e = 0; e < num_edges; e++) {
-                        if (hypergraph.VerticesInEdge(edges_vec[e]).value()
-                            .contains(vertices_vec[j])) {
-                            sum = sum
-                                ? *sum + w[i][e].value()
-                                : w[i][e].value();
-                        }
-                    }
-                    if (sum) {
-                        s.add(!a[i][j].value() || (sum.value() >= 1));
+                if (i == j) { continue; }
+                absl::optional<z3::expr> sum;
+                for (int32_t e = 0; e < num_edges; e++) {
+                    if (hypergraph.VerticesInEdge(edges_vec[e]).value()
+                        .contains(vertices_vec[j])) {
+                        sum = sum
+                            ? *sum + w[i][e].value()
+                            : w[i][e].value();
                     }
                 }
+                s.add(!a[i][j].value() || (sum.value() >= 1));
             }
         }
 
@@ -291,7 +296,7 @@ void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
                     sum = sum ? *sum + w[i][e].value() : w[i][e].value();
                 }
             }
-            if (sum) { s.add(sum.value() >= 1); }
+            s.add(sum.value() >= 1);
         }
 
         for (int32_t i = 0; i < num_vertices; i++) {
@@ -299,11 +304,15 @@ void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
             for (int32_t e = 0; e < num_edges; e++) {
                 sum = sum ? *sum + w[i][e].value() : w[i][e].value();
             }
-            if (sum) { s.add(sum.value() <= width); }
+            s.add(sum.value() <= m);
         }
     }
 
     z3::set_param("pp.decimal", true);
+
+    s.minimize(m);
+
+    // std::cout << s.to_smt2() << "\n";
 
     switch(s.check()) {
     case z3::unsat:
