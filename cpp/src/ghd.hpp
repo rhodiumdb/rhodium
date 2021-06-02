@@ -197,6 +197,8 @@ void ComputeFHW(const Hypergraph<V>& hypergraph, float width) {
             ss << "w_" << i << "_" << e;
             std::string w_str = ss.str();
             w[i][e] = c.real_const(w_str.c_str());
+            s.add(w[i][e].value() <= 1);
+            s.add(w[i][e].value() >= 0);
         }
     }
 
