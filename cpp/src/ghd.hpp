@@ -107,6 +107,26 @@ public:
         }
     }
 
+    void Print() const {
+        std::cerr << "([";
+        for (const Hyperedge& edge : this->hyperedges) {
+            std::cerr << "{";
+            for (const V& vertex : edge.vertices) {
+                std::cerr << vertex << ",";
+            }
+            std::cerr << "},";
+        }
+        std::cerr << "],{";
+        for (const auto& [vertex, edges] : this->vertex_to_hyperedge) {
+            std::cerr << vertex << " -> {";
+            for (HyperedgeId edge : edges) {
+                std::cerr << edge << ",";
+            }
+            std::cerr << "},";
+        }
+        std::cerr << "})\n";
+    }
+
 private:
     struct Hyperedge {
         absl::flat_hash_set<V> vertices;
