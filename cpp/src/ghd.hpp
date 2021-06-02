@@ -60,12 +60,12 @@ public:
         if (edge >= this->hyperedges.size()) {
             return absl::nullopt;
         }
-        return hyperedges.at(edge).vertices;
+        return this->hyperedges.at(edge).vertices;
     }
 
     absl::flat_hash_set<V> AllVertices() const {
         absl::flat_hash_set<V> result;
-        for (const auto& [key, value] : vertex_to_hyperedge) {
+        for (const auto& [key, value] : this->vertex_to_hyperedge) {
             result.insert(key);
         }
         return result;
@@ -73,8 +73,8 @@ public:
 
     std::vector<HyperedgeId> AllEdges() const {
         std::vector<HyperedgeId> result;
-        for (int32_t i = 0; i < hyperedges.size(); i++) {
-            if (!hyperedges.at(i).vertices.empty()) {
+        for (int32_t i = 0; i < this->hyperedges.size(); i++) {
+            if (!this->hyperedges.at(i).vertices.empty()) {
                 result.push_back(i);
             }
         }
@@ -82,28 +82,28 @@ public:
     }
 
     int32_t NumVertices() const {
-        return vertex_to_hyperedge.size();
+        return this->vertex_to_hyperedge.size();
     }
 
     int32_t NumEdges() const {
-        return hyperedges.size();
+        return this->hyperedges.size();
     }
 
     void DeleteVertex(const V& vertex) {
         if (auto edges = EdgesIncidentOnVertex(vertex)) {
             for (const auto& edge : *edges) {
-                hyperedges.at(edge).vertices.erase(vertex);
+                this->hyperedges.at(edge).vertices.erase(vertex);
             }
-            vertex_to_hyperedge.erase(vertex);
+            this->vertex_to_hyperedge.erase(vertex);
         }
     }
 
     void DeleteEdge(HyperedgeId edge) {
         if (auto vertices = VerticesInEdge(edge)) {
             for (const auto& vertex : *vertices) {
-                vertex_to_hyperedge.at(vertex).erase(edge);
+                this->vertex_to_hyperedge.at(vertex).erase(edge);
             }
-            hyperedges.at(edge) = Hyperedge { {} };
+            this->hyperedges.at(edge) = Hyperedge { {} };
         }
     }
 
