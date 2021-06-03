@@ -143,7 +143,7 @@ struct Tree {
 };
 
 template<typename V>
-void ComputeFHW(const Hypergraph<V>& hypergraph) {
+absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
     auto all_vertices = hypergraph.AllVertices();
     std::vector<V> vertices_vec(all_vertices.begin(), all_vertices.end());
     std::sort(vertices_vec.begin(), vertices_vec.end());
@@ -314,17 +314,21 @@ void ComputeFHW(const Hypergraph<V>& hypergraph) {
 
     // std::cout << s.to_smt2() << "\n";
 
-    switch(s.check()) {
-    case z3::unsat:
-        std::cerr << "Graph had no GHD\n"; break;
-    case z3::sat:
-        std::cerr
-            << "Graph had GHD\n"
-            << "Model:\n" << s.get_model() << "\n";
-        break;
-    case z3::unknown:
-        std::cerr << "Graph was too confusing for Z3\n"; break;
+    if (s.check() == z3::sat) {
+        auto model = s.get_model();
+        absl::optional<double> fhw;
+        for (int32_t i = 0; i < model.size(); i++) {
+            if (model[i].name().str() == "m") {
+                double temp;
+                if (model.get_const_interp(model[i]).is_numeral(temp)) {
+                    fhw = temp;
+                }
+            }
+        }
+        return fhw;
     }
+
+    return absl::nullopt;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
