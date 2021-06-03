@@ -27,6 +27,8 @@ target_link_libraries(
   fhd_tests
   absl::hash
   absl::strings
+  absl::status
+  absl::statusor
   gtest
   gtest_main
 )
