@@ -13,6 +13,7 @@
 #include <absl/container/flat_hash_set.h>
 #include <absl/memory/memory.h>
 #include <absl/strings/str_cat.h>
+#include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 #include <absl/types/optional.h>
 
@@ -136,14 +137,74 @@ private:
     absl::flat_hash_map<V, absl::flat_hash_set<HyperedgeId>> vertex_to_hyperedge;
 };
 
-template<typename V>
-struct Tree {
-    V value;
-    std::vector<Tree> children;
+using NodeId = int32_t;
+
+template<typename Value>
+struct Digraph {
+    std::vector<Value> node_values;
+    absl::flat_hash_map<NodeId, absl::flat_hash_set<NodeId>> edges_out_of;
+
+    NodeId AddVertex(const Value& value) {
+        int32_t result = node_values.size();
+        node_values.push_back(value);
+        edges_out_of[result];
+        return result;
+    }
+
+    bool AddEdge(NodeId x, NodeId y) {
+        if (!edges_out_of.contains(x)) {
+            return false;
+        }
+
+        if (!edges_out_of.contains(y)) {
+            return false;
+        }
+
+        edges_out_of.at(x).insert(y);
+
+        return true;
+    }
+
+    const absl::flat_hash_set<NodeId>& EdgesOutOf(NodeId node) const {
+        return edges_out_of.at(node);
+    }
+
+    std::vector<NodeId> AllNodes() const {
+        std::vector<NodeId> result;
+        for (int32_t i = 0; i < node_values.size(); i++) {
+            result.push_back(i);
+        }
+        return result;
+    }
+
+    Value& GetValue(NodeId node) {
+        return node_values.at(node);
+    }
+
+    const Value& GetValue(NodeId node) const {
+        return node_values.at(node);
+    }
 };
+
+void LookupInModel(z3::model model,
+                   absl::string_view name,
+                   std::function<void(const z3::func_decl&)> callback) {
+    for (int32_t i = 0; i < model.size(); i++) {
+        if (model[i].name().str() == name) {
+            callback(model[i]);
+        }
+    }
+}
 
 template<typename V>
 absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
+    for (const V& vertex : hypergraph.AllVertices()) {
+        if (hypergraph.EdgesIncidentOnVertex(vertex).value().empty()) {
+            std::cerr << "Detected vertex with no covering edges\n";
+            throw 1; // FIXME: use absl::StatusOr
+        }
+    }
+
     auto all_vertices = hypergraph.AllVertices();
     std::vector<V> vertices_vec(all_vertices.begin(), all_vertices.end());
     std::sort(vertices_vec.begin(), vertices_vec.end());
@@ -314,21 +375,91 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
 
     // std::cout << s.to_smt2() << "\n";
 
-    if (s.check() == z3::sat) {
-        auto model = s.get_model();
-        absl::optional<double> fhw;
-        for (int32_t i = 0; i < model.size(); i++) {
-            if (model[i].name().str() == "m") {
-                double temp;
-                if (model.get_const_interp(model[i]).is_numeral(temp)) {
-                    fhw = temp;
-                }
-            }
+
+    if (s.check() != z3::sat) { return absl::nullopt; }
+
+    auto model = s.get_model();
+    absl::optional<double> fhw;
+    LookupInModel(model, "m", [&fhw, &model](const z3::func_decl& decl) {
+        double temp;
+        if (model.get_const_interp(decl).is_numeral(temp)) {
+            fhw = temp;
         }
-        return fhw;
+    });
+
+    std::vector<int32_t> ordering;
+    for (int32_t i = 0; i < num_vertices; i++) {
+        auto pos = ordering.begin();
+        for (int32_t j : ordering) {
+            bool ostar_j_i = false;
+            LookupInModel(model, absl::StrFormat("ostar_%d_%d", j, i),
+                          [&ostar_j_i, &model](const z3::func_decl& decl) {
+                              ostar_j_i =
+                                  model.get_const_interp(decl).bool_value()
+                                  == Z3_L_TRUE;
+                          });
+            if (!ostar_j_i) { break; }
+            pos++;
+        }
+        ordering.insert(pos, i);
     }
 
-    return absl::nullopt;
+    std::vector<absl::flat_hash_map<HyperedgeId, double>> weights;
+    weights.resize(num_vertices);
+    for (int32_t i = 0; i < num_vertices; i++) {
+        for (int32_t e = 0; e < num_edges; e++) {
+            absl::optional<double> n;
+            LookupInModel(
+                model, absl::StrFormat("w_%d_%d", i, e),
+                [&n, &model](const z3::func_decl& decl) {
+                    double temp;
+                    if (model.get_const_interp(decl).is_numeral(temp)) {
+                        n = temp;
+                    }
+                });
+            assert(n.has_value());
+            weights[i][edges_vec[e]] = n.value();
+        }
+    }
+
+    Digraph<absl::flat_hash_set<V>> tree_graph;
+
+    auto smallest =
+        [&ordering, &vertices_vec](const absl::flat_hash_set<V>& x) -> int32_t {
+            for (int32_t v : ordering) {
+                if (x.contains(vertices_vec[v])) {
+                    return v;
+                }
+            }
+            throw 1; // FIXME
+        };
+
+    absl::flat_hash_map<V, absl::flat_hash_set<V>> chi;
+
+    for (const V& vertex : vertices_vec) {
+        (void) tree_graph.AddVertex(absl::flat_hash_set<V>());
+        // note: we are going to rely on the equivalence between indices in
+        // vertices_vec and valid NodeIds from here on.
+    }
+
+    for (HyperedgeId edge : edges_vec) {
+        auto vertices = hypergraph.VerticesInEdge(edge).value();
+        for (const V& vertex : vertices) {
+            tree_graph.GetValue(smallest(vertices)).insert(vertex);
+        }
+    }
+
+    for (int32_t v : ordering) {
+        absl::flat_hash_set<V> temp = tree_graph.GetValue(v);
+        if (temp.size() > 1) {
+            temp.erase(vertices_vec[v]);
+            int32_t next = smallest(temp);
+            tree_graph.GetValue(next).merge(temp);
+            tree_graph.AddEdge(next, v);
+        }
+    }
+
+    return fhw;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

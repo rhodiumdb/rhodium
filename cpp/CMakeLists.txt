@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 20)
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -g -O1")
 # set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fno-omit-frame-pointer -fsanitize=address -fno-optimize-sibling-calls -fsanitize-address-use-after-scope -g -O1")
 
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -g -O1")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -g -O1")
+# set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fno-omit-frame-pointer -g -O1")
+
 find_package(absl REQUIRED)
 add_executable(rdss
   src/rdss.cpp
@@ -29,6 +33,7 @@ target_link_libraries(
   absl::strings
   absl::status
   absl::statusor
+  z3
   gtest
   gtest_main
 )
