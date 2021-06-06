@@ -1,9 +1,10 @@
 #include <string>
 #include <vector>
 #include <gtest/gtest.h>
+#include <absl/strings/ascii.h>
+#include <absl/strings/numbers.h>
 #include <absl/strings/str_split.h>
 #include <absl/strings/string_view.h>
-#include <absl/strings/ascii.h>
 
 #include "../src/filesystem.hpp"
 #include "../src/ghd.hpp"
@@ -54,6 +55,21 @@ TEST(FHD, Parser) {
     }
     auto parsed_graph = parse_hg(*graph_str);
     EXPECT_TRUE(parsed_graph.has_value());
+
+    absl::StatusOr<std::string> fhw_result_str = rdss::GetFileContents("../test/graphs/c4.opt");
+    if (!fhw_result_str.ok()) {
+        std::cerr << fhw_result_str.status();
+        FAIL();
+    }
+
+    double fhw_opt;
+    absl::string_view fhw_result_str_view = *fhw_result_str;
+    auto parsed_fhw_result = absl::SimpleAtod(fhw_result_str_view, &fhw_opt);
+    EXPECT_TRUE(parsed_fhw_result);
+
+    auto computed_fhw = rdss::ComputeFHW(parsed_graph.value());
+    EXPECT_TRUE(computed_fhw.has_value());
+    EXPECT_EQ(computed_fhw.value(), fhw_opt);
 
     auto set0 = { "v1", "v2" };
     EXPECT_EQ(parsed_graph->VerticesInEdge(0).value(), set0);
