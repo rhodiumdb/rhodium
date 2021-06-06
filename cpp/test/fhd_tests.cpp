@@ -82,3 +82,11 @@ TEST(FHD, c4) {
 TEST(FHD, triangle) {
     test_graph("../test/graphs/triangle.hg", "../test/graphs/triangle.opt");
 }
+
+TEST (FHD, imdb_q13a) {
+    test_graph("../test/graphs/imdb-q13a.hg", "../test/graphs/imdb-q13a.opt");
+}
+
+TEST (FHD, tpch_manual_q10_min) {
+    test_graph("../test/graphs/tpch-manual-q10-min.hg", "../test/graphs/tpch-manual-q10-min.opt");
+}
