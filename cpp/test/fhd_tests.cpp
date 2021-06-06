@@ -47,20 +47,12 @@ parse_hg(absl::string_view input) {
 }
 
 TEST(FHD, Parser) {
-    absl::StatusOr<absl::string_view> graph_str = rdss::GetFileContents("../test/graphs/c4.hg");
+    absl::StatusOr<std::string> graph_str = rdss::GetFileContents("../test/graphs/c4.hg");
     if (!graph_str.ok()) {
         std::cerr << graph_str.status();
         FAIL();
     }
-    auto parsed_graph = parse_hg(
-        *graph_str
-        //"e1(v1,v2),\n"
-        //"e2(v1,v3),\n"
-        //"e3(v1,v4),\n"
-        //"e4(v2,v3),\n"
-        //"e5(v2,v4),\n"
-        //"e6(v3,v4).\n"
-    );
+    auto parsed_graph = parse_hg(*graph_str);
     EXPECT_TRUE(parsed_graph.has_value());
 
     auto set0 = { "v1", "v2" };
