@@ -47,8 +47,11 @@ parse_hg(absl::string_view input) {
     return graph;
 }
 
-TEST(FHD, c4) {
-    absl::StatusOr<std::string> graph_str = rdss::GetFileContents("../test/graphs/c4.hg");
+void test_graph(
+    const std::filesystem::path& hg_path,
+    const std::filesystem::path& opt_path
+) {
+     absl::StatusOr<std::string> graph_str = rdss::GetFileContents(hg_path);
     if (!graph_str.ok()) {
         std::cerr << graph_str.status();
         FAIL();
@@ -56,7 +59,7 @@ TEST(FHD, c4) {
     auto parsed_graph = parse_hg(*graph_str);
     EXPECT_TRUE(parsed_graph.has_value());
 
-    absl::StatusOr<std::string> fhw_result_str = rdss::GetFileContents("../test/graphs/c4.opt");
+    absl::StatusOr<std::string> fhw_result_str = rdss::GetFileContents(opt_path);
     if (!fhw_result_str.ok()) {
         std::cerr << fhw_result_str.status();
         FAIL();
@@ -70,47 +73,12 @@ TEST(FHD, c4) {
     EXPECT_TRUE(computed_fhw.has_value());
     EXPECT_EQ(computed_fhw.value(), fhw_opt);
 
-    auto set0 = { "v1", "v2" };
-    EXPECT_EQ(parsed_graph->VerticesInEdge(0).value(), set0);
-
-    auto set1 = { "v1", "v3" };
-    EXPECT_EQ(parsed_graph->VerticesInEdge(1).value(), set1);
-
-    auto set2 = { "v1", "v4" };
-    EXPECT_EQ(parsed_graph->VerticesInEdge(2).value(), set2);
-
-    auto set3 = { "v2", "v3" };
-    EXPECT_EQ(parsed_graph->VerticesInEdge(3).value(), set3);
-
-    auto set4 = { "v2", "v4" };
-    EXPECT_EQ(parsed_graph->VerticesInEdge(4).value(), set4);
-
-    auto set5 = { "v3", "v4" };
-    EXPECT_EQ(parsed_graph->VerticesInEdge(5).value(), set5);
-
-    EXPECT_EQ(parsed_graph->NumEdges(), 6);
 }
 
-TEST(FHD, Kakuro) {
-    absl::StatusOr<std::string> graph_str = rdss::GetFileContents("../test/graphs/Kakuro-medium-159.hg");
-    if (!graph_str.ok()) {
-        std::cerr << graph_str.status();
-        FAIL();
-    }
-    auto parsed_graph = parse_hg(*graph_str);
-    EXPECT_TRUE(parsed_graph.has_value());
+TEST(FHD, c4) {
+    test_graph("../test/graphs/c4.hg", "../test/graphs/c4.opt");
+}
 
-    absl::StatusOr<std::string> fhw_result_str = rdss::GetFileContents("../test/graphs/Kakuro-medium-159.opt");
-    if (!fhw_result_str.ok()) {
-        std::cerr << fhw_result_str.status();
-        FAIL();
-    }
-    double fhw_opt;
-    absl::string_view fhw_result_str_view = *fhw_result_str;
-    auto parsed_fhw_result = absl::SimpleAtod(fhw_result_str_view, &fhw_opt);
-    EXPECT_TRUE(parsed_fhw_result);
-
-    auto computed_fhw = rdss::ComputeFHW(parsed_graph.value());
-    EXPECT_TRUE(computed_fhw.has_value());
-    EXPECT_EQ(computed_fhw.value(), fhw_opt);
+TEST(FHD, triangle) {
+    test_graph("../test/graphs/triangle.hg", "../test/graphs/triangle.opt");
 }
