@@ -47,7 +47,7 @@ parse_hg(absl::string_view input) {
     return graph;
 }
 
-TEST(FHD, Parser) {
+TEST(FHD, c4) {
     absl::StatusOr<std::string> graph_str = rdss::GetFileContents("../test/graphs/c4.hg");
     if (!graph_str.ok()) {
         std::cerr << graph_str.status();
@@ -61,7 +61,6 @@ TEST(FHD, Parser) {
         std::cerr << fhw_result_str.status();
         FAIL();
     }
-
     double fhw_opt;
     absl::string_view fhw_result_str_view = *fhw_result_str;
     auto parsed_fhw_result = absl::SimpleAtod(fhw_result_str_view, &fhw_opt);
@@ -90,4 +89,28 @@ TEST(FHD, Parser) {
     EXPECT_EQ(parsed_graph->VerticesInEdge(5).value(), set5);
 
     EXPECT_EQ(parsed_graph->NumEdges(), 6);
+}
+
+TEST(FHD, Kakuro) {
+    absl::StatusOr<std::string> graph_str = rdss::GetFileContents("../test/graphs/Kakuro-medium-159.hg");
+    if (!graph_str.ok()) {
+        std::cerr << graph_str.status();
+        FAIL();
+    }
+    auto parsed_graph = parse_hg(*graph_str);
+    EXPECT_TRUE(parsed_graph.has_value());
+
+    absl::StatusOr<std::string> fhw_result_str = rdss::GetFileContents("../test/graphs/Kakuro-medium-159.opt");
+    if (!fhw_result_str.ok()) {
+        std::cerr << fhw_result_str.status();
+        FAIL();
+    }
+    double fhw_opt;
+    absl::string_view fhw_result_str_view = *fhw_result_str;
+    auto parsed_fhw_result = absl::SimpleAtod(fhw_result_str_view, &fhw_opt);
+    EXPECT_TRUE(parsed_fhw_result);
+
+    auto computed_fhw = rdss::ComputeFHW(parsed_graph.value());
+    EXPECT_TRUE(computed_fhw.has_value());
+    EXPECT_EQ(computed_fhw.value(), fhw_opt);
 }
