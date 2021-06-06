@@ -90,3 +90,11 @@ TEST (FHD, imdb_q13a) {
 TEST (FHD, tpch_manual_q10_min) {
     test_graph("../test/graphs/tpch-manual-q10-min.hg", "../test/graphs/tpch-manual-q10-min.opt");
 }
+
+TEST (FHD, tpch_manual_q10) {
+    test_graph("../test/graphs/tpch-manual-q10.hg", "../test/graphs/tpch-manual-q10.opt");
+}
+
+TEST (FHD, tpch_synthetic_q5) {
+    test_graph("../test/graphs/tpch-synthetic-q5.hg", "../test/graphs/tpch-synthetic-q5.opt");
+}
