@@ -375,7 +375,6 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
 
     // std::cout << s.to_smt2() << "\n";
 
-
     if (s.check() != z3::sat) { return absl::nullopt; }
 
     auto model = s.get_model();
@@ -404,8 +403,22 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
         ordering.insert(pos, i);
     }
 
-    std::vector<absl::flat_hash_map<HyperedgeId, double>> weights;
-    weights.resize(num_vertices);
+    struct Bag {
+        absl::flat_hash_set<V> attributes;
+        absl::flat_hash_map<HyperedgeId, double> relations;
+        Bag() : attributes(), relations() {}
+    };
+
+    using FHD = Digraph<Bag>;
+
+    FHD tree_graph;
+
+    for (const V& vertex : vertices_vec) {
+        (void) tree_graph.AddVertex(Bag());
+        // note: we are going to rely on the equivalence between indices in
+        // vertices_vec and valid NodeIds from here on.
+    }
+
     for (int32_t i = 0; i < num_vertices; i++) {
         for (int32_t e = 0; e < num_edges; e++) {
             absl::optional<double> n;
@@ -418,11 +431,9 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
                     }
                 });
             assert(n.has_value());
-            weights[i][edges_vec[e]] = n.value();
+            tree_graph.GetValue(i).relations[edges_vec[e]] = n.value();
         }
     }
-
-    Digraph<absl::flat_hash_set<V>> tree_graph;
 
     auto smallest =
         [&ordering, &vertices_vec](const absl::flat_hash_set<V>& x) -> int32_t {
@@ -436,25 +447,19 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
 
     absl::flat_hash_map<V, absl::flat_hash_set<V>> chi;
 
-    for (const V& vertex : vertices_vec) {
-        (void) tree_graph.AddVertex(absl::flat_hash_set<V>());
-        // note: we are going to rely on the equivalence between indices in
-        // vertices_vec and valid NodeIds from here on.
-    }
-
     for (HyperedgeId edge : edges_vec) {
         auto vertices = hypergraph.VerticesInEdge(edge).value();
         for (const V& vertex : vertices) {
-            tree_graph.GetValue(smallest(vertices)).insert(vertex);
+            tree_graph.GetValue(smallest(vertices)).attributes.insert(vertex);
         }
     }
 
     for (int32_t v : ordering) {
-        absl::flat_hash_set<V> temp = tree_graph.GetValue(v);
+        absl::flat_hash_set<V> temp = tree_graph.GetValue(v).attributes;
         if (temp.size() > 1) {
             temp.erase(vertices_vec[v]);
             int32_t next = smallest(temp);
-            tree_graph.GetValue(next).merge(temp);
+            tree_graph.GetValue(next).attributes.merge(temp);
             tree_graph.AddEdge(next, v);
         }
     }
