@@ -144,10 +144,13 @@ struct Digraph {
     std::vector<Value> node_values;
     absl::flat_hash_map<NodeId, absl::flat_hash_set<NodeId>> edges_out_of;
 
+    absl::flat_hash_set<NodeId> roots;
+
     NodeId AddVertex(const Value& value) {
         int32_t result = node_values.size();
         node_values.push_back(value);
         edges_out_of[result];
+        roots.insert(result);
         return result;
     }
 
@@ -161,8 +164,13 @@ struct Digraph {
         }
 
         edges_out_of.at(x).insert(y);
+        roots.erase(y);
 
         return true;
+    }
+
+    const absl::flat_hash_set<NodeId>& Roots() const {
+        return roots;
     }
 
     const absl::flat_hash_set<NodeId>& EdgesOutOf(NodeId node) const {
@@ -185,6 +193,58 @@ struct Digraph {
         return node_values.at(node);
     }
 };
+
+template <typename V>
+struct Tree {
+    V element;
+    std::vector<Tree> children;
+
+    std::string Print(std::function<std::string(const V&)> callback) const {
+        std::stringstream ss;
+        ss << "{ \"element\": " << callback(this->element) << ","
+           << "  \"children\": [ ";
+        std::vector<std::string> cs;
+        for (const auto& child : children) {
+            cs.push_back(child.Print(callback));
+        }
+        ss << absl::StrJoin(cs, ", ") << " ] }";
+
+        return ss.str();
+    }
+};
+
+template <typename V>
+absl::optional<Tree<V>> DigraphToTree(Digraph<V>& digraph) {
+    if (digraph.Roots().size() != 1) {
+        return absl::nullopt;
+    }
+
+    NodeId root = *(digraph.Roots().begin());
+
+    std::vector<std::pair<NodeId, Tree<V>*>> active;
+    absl::flat_hash_set<NodeId> seen;
+
+    Tree<V> tree { digraph.GetValue(root), { } };
+
+    active.push_back(std::pair<NodeId, Tree<V>*>{ root, &tree });
+    while (!active.empty()) {
+        auto [source, parent] = active.back();
+        active.pop_back();
+        if (seen.contains(source)) {
+            return absl::nullopt;
+        }
+        seen.insert(source);
+
+        for (const auto& target : digraph.EdgesOutOf(source)) {
+            parent->children.push_back(Tree<V>{ digraph.GetValue(target), { } });
+            // FIXME this is a dirty hack
+            parent->children.back().children.reserve(digraph.EdgesOutOf(target).size());
+            active.push_back({ target, &parent->children.back() });
+        }
+    }
+
+    return tree;
+}
 
 void LookupInModel(z3::model model,
                    absl::string_view name,
@@ -463,6 +523,21 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
             tree_graph.AddEdge(next, v);
         }
     }
+
+    auto tree = DigraphToTree(tree_graph).value();
+    std::cerr << tree.Print([](const Bag& bag) -> std::string {
+        std::vector<std::string> vec;
+
+        for (const auto& attribute : bag.attributes) {
+            vec.push_back(absl::StrFormat("\"%d\"", attribute));
+        }
+
+        return absl::StrCat(
+            "[",
+            absl::StrJoin(vec, ", "),
+            "]"
+        );
+    });
 
     return fhw;
 }
