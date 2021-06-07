@@ -69,9 +69,9 @@ void test_graph(
     auto parsed_fhw_result = absl::SimpleAtod(fhw_result_str_view, &fhw_opt);
     EXPECT_TRUE(parsed_fhw_result);
 
-    auto computed_fhw = rdss::ComputeFHW(parsed_graph.value());
-    EXPECT_TRUE(computed_fhw.has_value());
-    EXPECT_EQ(computed_fhw.value(), fhw_opt);
+    auto computed_fhw = rdss::ComputeFHD(parsed_graph.value());
+    EXPECT_TRUE(computed_fhw.ok());
+    EXPECT_EQ(computed_fhw->fhw, fhw_opt);
 
 }
 

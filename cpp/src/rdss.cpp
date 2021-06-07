@@ -72,10 +72,10 @@ void TestGHD() {
     // graph.AddVertexToEdge(3, e3);
     // graph.AddVertexToEdge(1, e3);
 
-    absl::optional<double> fhw = ComputeFHW(graph);
+    absl::StatusOr<FHD<int32_t>> fhd = ComputeFHD(graph);
     std::cerr << "FHW of graph is: ";
-    if (fhw.has_value()) {
-        std::cerr << fhw.value() << "\n";
+    if (fhd.ok()) {
+        std::cerr << fhd->fhw << "\n";
     } else {
         std::cerr << "unknown\n";
     }

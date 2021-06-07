@@ -12,6 +12,8 @@
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>
 #include <absl/memory/memory.h>
+#include <absl/status/status.h>
+#include <absl/status/statusor.h>
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
@@ -307,12 +309,17 @@ void LookupInModel(z3::model model,
     }
 }
 
+template <typename V>
+struct FHD {
+    double fhw;
+    Tree<Bag<V>> tree;
+};
+
 template<typename V>
-absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
+absl::StatusOr<FHD<V>> ComputeFHD(const Hypergraph<V>& hypergraph) {
     for (const V& vertex : hypergraph.AllVertices()) {
         if (hypergraph.EdgesIncidentOnVertex(vertex).value().empty()) {
-            std::cerr << "Detected vertex with no covering edges\n";
-            throw 1; // FIXME: use absl::StatusOr
+            return absl::FailedPreconditionError("Detected vertex with no covering edges.");
         }
     }
 
@@ -486,7 +493,12 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
 
     // std::cout << s.to_smt2() << "\n";
 
-    if (s.check() != z3::sat) { return absl::nullopt; }
+    auto s_check = s.check();
+    if (s_check == z3::unsat) {
+        return absl::InternalError("Z3 returned unsat. This should never happen.");
+    } else if (s_check == z3::unknown) {
+        return absl::DeadlineExceededError("Z3 returned unknown. This usually means it ran out of time or memory.");
+    }
 
     auto model = s.get_model();
     absl::optional<double> fhw;
@@ -514,9 +526,7 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
         ordering.insert(pos, i);
     }
 
-    using FHD = Digraph<Bag<V>>;
-
-    FHD tree_graph;
+    Digraph<Bag<V>> tree_graph;
 
     for (const V& vertex : vertices_vec) {
         (void) tree_graph.AddVertex(Bag<V>());
@@ -541,13 +551,13 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
     }
 
     auto smallest =
-        [&ordering, &vertices_vec](const absl::flat_hash_set<V>& x) -> int32_t {
+        [&ordering, &vertices_vec](const absl::flat_hash_set<V>& x) -> absl::optional<int32_t> {
             for (int32_t v : ordering) {
                 if (x.contains(vertices_vec[v])) {
                     return v;
                 }
             }
-            throw 1; // FIXME
+            return absl::nullopt;
         };
 
     absl::flat_hash_map<V, absl::flat_hash_set<V>> chi;
@@ -555,7 +565,7 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
     for (HyperedgeId edge : edges_vec) {
         auto vertices = hypergraph.VerticesInEdge(edge).value();
         for (const V& vertex : vertices) {
-            tree_graph.GetValue(smallest(vertices)).attributes.insert(vertex);
+            tree_graph.GetValue(smallest(vertices).value()).attributes.insert(vertex);
         }
     }
 
@@ -563,14 +573,15 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
         absl::flat_hash_set<V> temp = tree_graph.GetValue(v).attributes;
         if (temp.size() > 1) {
             temp.erase(vertices_vec[v]);
-            int32_t next = smallest(temp);
+            int32_t next = smallest(temp).value();
             tree_graph.GetValue(next).attributes.merge(temp);
             tree_graph.AddEdge(next, v);
         }
     }
 
     auto tree = DigraphToTree(tree_graph).value();
-    std::cerr << tree.Print([](const Bag<V>& bag) -> std::string {
+
+/*    std::cerr << tree.Print([](const Bag<V>& bag) -> std::string {
         std::vector<std::string> vec;
 
         for (const auto& attribute : bag.attributes) {
@@ -586,7 +597,15 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
 
     std::cerr << "Running Intersection Property: "
               << VerifyRunningIntersectionProperty(tree_graph) << "\n";
-    return fhw;
+*/
+    if (!fhw.has_value()) {
+        return absl::InternalError("Could not find 'm' in the model.");
+    }
+    if (!VerifyRunningIntersectionProperty(tree_graph)) {
+        return absl::InternalError("Result failed to satisfy running intersection property.");
+    }
+
+    return FHD<V> { fhw.value(), tree };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
