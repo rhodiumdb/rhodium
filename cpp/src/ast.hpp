@@ -71,45 +71,44 @@ struct PredicateEquals : public Predicate {
 struct Relation {
 };
 
-template<typename Child>
 struct RelationNot : public Relation {
-    Viewed<Child> rel;
+    Viewed<Relation*> rel;
 };
 
-template<typename Child>
 struct RelationJoin : public Relation {
-    Viewed<Child> lhs;
-    Viewed<Child> rhs;
+    Viewed<Relation*> lhs;
+    Viewed<Relation*> rhs;
     int32_t overlapping;
 };
 
-template<typename Child>
+struct RelationSemiJoin : public Relation {
+    Viewed<Relation*> lhs;
+    Viewed<Relation*> rhs;
+    int32_t overlapping;
+};
+
 struct RelationUnion : public Relation {
-    Viewed<Child> lhs;
-    Viewed<Child> rhs;
+    Viewed<Relation*> lhs;
+    Viewed<Relation*> rhs;
 };
 
-template<typename Child>
 struct RelationDifference : public Relation {
-    Viewed<Child> lhs;
-    Viewed<Child> rhs;
+    Viewed<Relation*> lhs;
+    Viewed<Relation*> rhs;
 };
 
-template<typename Child>
 struct RelationSelect : public Relation {
     Predicate predicate;
-    Viewed<Child> rel;
+    Viewed<Relation*> rel;
 };
 
-template<typename Child>
 struct RelationMap : public Relation {
     Function function;
-    Viewed<Child> rel;
+    Viewed<Relation*> rel;
 };
 
-template<typename Child>
 struct RelationView : public Relation {
-    Viewed<Child> rel;
+    Viewed<Relation*> rel;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

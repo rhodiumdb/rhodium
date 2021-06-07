@@ -19,6 +19,7 @@
 #include <absl/strings/str_join.h>
 #include <absl/types/optional.h>
 
+#include "ast.hpp"
 #include "union_find_map.hpp"
 
 namespace rdss {
@@ -606,6 +607,10 @@ absl::StatusOr<FHD<V>> ComputeFHD(const Hypergraph<V>& hypergraph) {
     }
 
     return FHD<V> { fhw.value(), tree };
+}
+
+Relation Yannakakis(Tree<Relation> something) {
+    throw 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
