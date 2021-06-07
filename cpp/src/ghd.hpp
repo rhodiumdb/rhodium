@@ -17,6 +17,8 @@
 #include <absl/strings/str_join.h>
 #include <absl/types/optional.h>
 
+#include "union_find_map.hpp"
+
 namespace rdss {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -214,6 +216,14 @@ struct Tree {
 };
 
 template <typename V>
+struct Bag {
+    absl::flat_hash_set<V> attributes;
+    absl::flat_hash_map<HyperedgeId, double> relations;
+    Bag() : attributes(), relations() {}
+};
+
+
+template <typename V>
 absl::optional<Tree<V>> DigraphToTree(Digraph<V>& digraph) {
     if (digraph.Roots().size() != 1) {
         return absl::nullopt;
@@ -244,6 +254,47 @@ absl::optional<Tree<V>> DigraphToTree(Digraph<V>& digraph) {
     }
 
     return tree;
+}
+
+template <typename V>
+bool VerifyRunningIntersectionProperty(const Digraph<Bag<V>>& digraph) {
+    absl::flat_hash_set<V> all_attributes;
+
+    for (NodeId node : digraph.AllNodes()) {
+        for (auto attribute : digraph.GetValue(node).attributes) {
+            all_attributes.insert(attribute);
+        }
+    }
+
+    for (auto attribute : all_attributes) {
+        absl::flat_hash_set<NodeId> contains_attribute;
+        for (NodeId node : digraph.AllNodes()) {
+            if (digraph.GetValue(node).attributes.contains(attribute)) {
+                contains_attribute.insert(node);
+            }
+        }
+        UnionFindMap<NodeId, std::monostate> uf;
+
+        for (NodeId node : contains_attribute) {
+            uf.Insert(node, std::monostate());
+        }
+
+        for (NodeId source : contains_attribute) {
+            for (NodeId target : digraph.EdgesOutOf(source)) {
+                if (contains_attribute.contains(target)) {
+                    uf.Union(source, target, [](std::monostate, std::monostate){
+                      return std::monostate();
+                    });
+                }
+            }
+        }
+
+        if (uf.GetRepresentatives().size() != 1) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void LookupInModel(z3::model model,
@@ -463,18 +514,12 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
         ordering.insert(pos, i);
     }
 
-    struct Bag {
-        absl::flat_hash_set<V> attributes;
-        absl::flat_hash_map<HyperedgeId, double> relations;
-        Bag() : attributes(), relations() {}
-    };
-
-    using FHD = Digraph<Bag>;
+    using FHD = Digraph<Bag<V>>;
 
     FHD tree_graph;
 
     for (const V& vertex : vertices_vec) {
-        (void) tree_graph.AddVertex(Bag());
+        (void) tree_graph.AddVertex(Bag<V>());
         // note: we are going to rely on the equivalence between indices in
         // vertices_vec and valid NodeIds from here on.
     }
@@ -525,7 +570,7 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
     }
 
     auto tree = DigraphToTree(tree_graph).value();
-    std::cerr << tree.Print([](const Bag& bag) -> std::string {
+    std::cerr << tree.Print([](const Bag<V>& bag) -> std::string {
         std::vector<std::string> vec;
 
         for (const auto& attribute : bag.attributes) {
@@ -537,8 +582,10 @@ absl::optional<double> ComputeFHW(const Hypergraph<V>& hypergraph) {
             absl::StrJoin(vec, ", "),
             "]"
         );
-    });
+    }) << "\n";
 
+    std::cerr << "Running Intersection Property: "
+              << VerifyRunningIntersectionProperty(tree_graph) << "\n";
     return fhw;
 }
 
