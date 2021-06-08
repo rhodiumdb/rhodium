@@ -689,7 +689,7 @@ Relation* Yannakakis(RelationFactory* factory,
                 TreeNode parent = parent_of.at(node);
 
                 parent->element =
-                    factory->Make<RelationSemijoin>(
+                    factory->Make<RelationJoin>(
                         Viewed(parent->element), Viewed(node->element), 3);
 
                 if (!inserted.contains(parent)) {

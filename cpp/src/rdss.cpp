@@ -81,6 +81,18 @@ void TestGHD() {
     }
 }
 
+void TestYannakakis() {
+    RelationFactory fac;
+    Tree<Relation*> tree {
+        fac.Make<RelationReference>("A", 2),
+        {
+            { fac.Make<RelationReference>("B", 2), {} },
+            { fac.Make<RelationReference>("C", 2), {} }
+        }
+    };
+    std::cerr << Yannakakis(&fac, tree)->ToString() << "\n";
+}
+
 absl::Status RealMain() {
     rdss::DataStructure example("Example");
     // example.members.push_back(
@@ -91,6 +103,7 @@ absl::Status RealMain() {
     std::cout << example.ToCpp();
 
     TestGHD();
+    TestYannakakis();
 
     return absl::OkStatus();
 }

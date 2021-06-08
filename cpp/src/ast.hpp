@@ -9,6 +9,7 @@
 
 #include <absl/memory/memory.h>
 #include <absl/strings/str_cat.h>
+#include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 #include <absl/types/optional.h>
 
@@ -29,6 +30,20 @@ struct Viewed {
         for (int32_t i = 0; i < rel_->Arity(); i++) {
             perm.push_back(i);
         }
+    }
+
+    std::string ToString() const {
+        std::vector<std::string> strings;
+        for (const auto& attr_maybe : perm) {
+            if (attr_maybe.has_value()) {
+                strings.push_back(absl::StrFormat("%d", attr_maybe.value()));
+            } else {
+                strings.push_back("ø");
+            }
+        }
+        std::string perm_string =
+            absl::StrFormat("[%s]", absl::StrJoin(strings, ", "));
+        return absl::StrFormat("Viewed(%s, %s)", perm_string, rel->ToString());
     }
 
     int32_t Arity() const {
@@ -87,6 +102,7 @@ struct PredicateEquals : public Predicate {
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Relation {
+    virtual std::string ToString() const = 0;
     virtual int32_t Arity() const = 0;
 };
 
@@ -110,10 +126,30 @@ absl::optional<T*> DynamicCast(S* pointer) {
     return casted;
 }
 
+struct RelationReference : public Relation {
+    std::string name;
+    int32_t arity;
+
+    explicit RelationReference(absl::string_view name_, int32_t arity_)
+        : name(name_), arity(arity_) {}
+
+    std::string ToString() const override {
+        return name;
+    }
+
+    int32_t Arity() const override {
+        return arity;
+    }
+};
+
 struct RelationNot : public Relation {
     Viewed<Relation*> rel;
 
     explicit RelationNot(const Viewed<Relation*>& rel_) : rel(rel_) {}
+
+    std::string ToString() const override {
+        return absl::StrFormat("Not(%s)", rel.ToString());
+    }
 
     int32_t Arity() const override { return rel.Arity(); }
 };
@@ -128,12 +164,19 @@ struct RelationJoin : public Relation {
                  int32_t overlapping_)
         : lhs(lhs_), rhs(rhs_), overlapping(overlapping_) {}
 
+    std::string ToString() const override {
+        return absl::StrFormat("Join(%s, %s, %d)",
+                               lhs.ToString(),
+                               rhs.ToString(),
+                               overlapping);
+    }
+
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
         int32_t rhs_arity = rhs.Arity();
         int32_t result_arity = lhs_arity + rhs_arity - overlapping;
         if (result_arity < 0) {
-            throw "type error got past the typechecker";
+            // throw "type error got past the typechecker";
         }
         return result_arity;
     }
@@ -149,12 +192,19 @@ struct RelationSemijoin : public Relation {
                      int32_t overlapping_)
         : lhs(lhs_), rhs(rhs_), overlapping(overlapping_) {}
 
+    std::string ToString() const override {
+        return absl::StrFormat("Semijoin(%s, %s, %d)",
+                               lhs.ToString(),
+                               rhs.ToString(),
+                               overlapping);
+    }
+
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
         int32_t rhs_arity = rhs.Arity();
         int32_t result_arity = lhs_arity + rhs_arity - overlapping;
         if (result_arity < 0) {
-            throw "type error got past the typechecker";
+            // throw "type error got past the typechecker";
         }
         return result_arity;
     }
@@ -168,11 +218,17 @@ struct RelationUnion : public Relation {
                   const Viewed<Relation*>& rhs_)
         : lhs(lhs_), rhs(rhs_) {}
 
+    std::string ToString() const override {
+        return absl::StrFormat("Union(%s, %s)",
+                               lhs.ToString(),
+                               rhs.ToString());
+    }
+
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
         int32_t rhs_arity = rhs.Arity();
         if (lhs_arity != rhs_arity) {
-            throw "type error got past the typechecker";
+            // throw "type error got past the typechecker";
         }
         return lhs_arity;
     }
@@ -186,11 +242,17 @@ struct RelationDifference : public Relation {
                        const Viewed<Relation*>& rhs_)
         : lhs(lhs_), rhs(rhs_) {}
 
+    std::string ToString() const override {
+        return absl::StrFormat("Difference(%s, %s)",
+                               lhs.ToString(),
+                               rhs.ToString());
+    }
+
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
         int32_t rhs_arity = rhs.Arity();
         if (lhs_arity != rhs_arity) {
-            throw "type error got past the typechecker";
+            // throw "type error got past the typechecker";
         }
         return lhs_arity;
     }
@@ -203,6 +265,12 @@ struct RelationSelect : public Relation {
     RelationSelect(const Predicate& predicate_,
                    const Viewed<Relation*>& rel_)
         : predicate(predicate_), rel(rel_) {}
+
+    std::string ToString() const override {
+        // FIXME: add pretty-printing for predicates
+        return absl::StrFormat("Select(<predicate>, %s)",
+                               rel.ToString());
+    }
 
     int32_t Arity() const override {
         return rel.Arity();
@@ -217,9 +285,15 @@ struct RelationMap : public Relation {
                 const Viewed<Relation*>& rel_)
         : function(function_), rel(rel_) {}
 
+    std::string ToString() const override {
+        return absl::StrFormat("Map(%s, %s)",
+                               function.name,
+                               rel.ToString());
+    }
+
     int32_t Arity() const override {
         if (function.arguments != rel.Arity()) {
-            throw "type error got past the typechecker";
+            // throw "type error got past the typechecker";
         }
         return function.results;
     }
@@ -229,6 +303,11 @@ struct RelationView : public Relation {
     Viewed<Relation*> rel;
 
     RelationView(const Viewed<Relation*>& rel_) : rel(rel_) {}
+
+    std::string ToString() const override {
+        return absl::StrFormat("View(%s)",
+                               rel.ToString());
+    }
 
     int32_t Arity() const override {
         return rel.Arity();
