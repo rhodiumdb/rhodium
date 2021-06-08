@@ -25,6 +25,12 @@ struct Viewed {
     AttrPartialPermutation perm;
     T rel;
 
+    Viewed(const T& rel_) : rel(rel_), perm() {
+        for (int32_t i = 0; i < rel_->Arity(); i++) {
+            perm.push_back(i);
+        }
+    }
+
     int32_t Arity() const {
         int32_t result = 0;
         for (const auto& attr_maybe : perm) {
@@ -107,6 +113,8 @@ absl::optional<T*> DynamicCast(S* pointer) {
 struct RelationNot : public Relation {
     Viewed<Relation*> rel;
 
+    explicit RelationNot(const Viewed<Relation*>& rel_) : rel(rel_) {}
+
     int32_t Arity() const override { return rel.Arity(); }
 };
 
@@ -114,6 +122,11 @@ struct RelationJoin : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
     int32_t overlapping;
+
+    RelationJoin(const Viewed<Relation*>& lhs_,
+                 const Viewed<Relation*>& rhs_,
+                 int32_t overlapping_)
+        : lhs(lhs_), rhs(rhs_), overlapping(overlapping_) {}
 
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
@@ -126,10 +139,15 @@ struct RelationJoin : public Relation {
     }
 };
 
-struct RelationSemiJoin : public Relation {
+struct RelationSemijoin : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
     int32_t overlapping;
+
+    RelationSemijoin(const Viewed<Relation*>& lhs_,
+                     const Viewed<Relation*>& rhs_,
+                     int32_t overlapping_)
+        : lhs(lhs_), rhs(rhs_), overlapping(overlapping_) {}
 
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
@@ -146,6 +164,10 @@ struct RelationUnion : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
 
+    RelationUnion(const Viewed<Relation*>& lhs_,
+                  const Viewed<Relation*>& rhs_)
+        : lhs(lhs_), rhs(rhs_) {}
+
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
         int32_t rhs_arity = rhs.Arity();
@@ -159,6 +181,10 @@ struct RelationUnion : public Relation {
 struct RelationDifference : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
+
+    RelationDifference(const Viewed<Relation*>& lhs_,
+                       const Viewed<Relation*>& rhs_)
+        : lhs(lhs_), rhs(rhs_) {}
 
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
@@ -174,6 +200,10 @@ struct RelationSelect : public Relation {
     Predicate predicate;
     Viewed<Relation*> rel;
 
+    RelationSelect(const Predicate& predicate_,
+                   const Viewed<Relation*>& rel_)
+        : predicate(predicate_), rel(rel_) {}
+
     int32_t Arity() const override {
         return rel.Arity();
     }
@@ -182,6 +212,10 @@ struct RelationSelect : public Relation {
 struct RelationMap : public Relation {
     Function function;
     Viewed<Relation*> rel;
+
+    RelationMap(const Function& function_,
+                const Viewed<Relation*>& rel_)
+        : function(function_), rel(rel_) {}
 
     int32_t Arity() const override {
         if (function.arguments != rel.Arity()) {
@@ -193,6 +227,8 @@ struct RelationMap : public Relation {
 
 struct RelationView : public Relation {
     Viewed<Relation*> rel;
+
+    RelationView(const Viewed<Relation*>& rel_) : rel(rel_) {}
 
     int32_t Arity() const override {
         return rel.Arity();
