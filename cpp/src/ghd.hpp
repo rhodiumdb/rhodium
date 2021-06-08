@@ -609,8 +609,98 @@ absl::StatusOr<FHD<V>> ComputeFHD(const Hypergraph<V>& hypergraph) {
     return FHD<V> { fhw.value(), tree };
 }
 
-Relation Yannakakis(Tree<Relation> something) {
-    throw 1;
+Relation* Yannakakis(RelationFactory* factory,
+                     Tree<Relation*> join_tree) {
+    using TreeNode = Tree<Relation*>*;
+    absl::flat_hash_map<TreeNode, TreeNode> parent_of;
+    absl::flat_hash_set<TreeNode> leaf_nodes;
+
+    { // Compute `parent_of` and `leaf_nodes`
+        std::vector<TreeNode> active;
+        active.push_back(&join_tree);
+        while (!active.empty()) {
+            TreeNode node = active.back();
+            active.pop_back();
+            bool had_children = false;
+            for (auto& subtree : node->children) {
+                had_children = true;
+                TreeNode subnode = &subtree;
+                parent_of[subnode] = node;
+                active.push_back(subnode);
+            }
+            if (!had_children) {
+                leaf_nodes.insert(node);
+            }
+        }
+    }
+
+    { // First bottom-up pass
+        std::deque<TreeNode> active(leaf_nodes.begin(), leaf_nodes.end());
+        absl::flat_hash_set<TreeNode> inserted = leaf_nodes;
+
+        while(!active.empty()) {
+            TreeNode node = active.back();
+            active.pop_back();
+
+            if (parent_of.contains(node)) {
+                TreeNode parent = parent_of.at(node);
+
+                parent->element =
+                    factory->Make<RelationSemijoin>(
+                        Viewed(parent->element), Viewed(node->element), 3);
+
+                if (!inserted.contains(parent)) {
+                    active.push_front(parent);
+                    inserted.insert(parent);
+                }
+            }
+        }
+    }
+
+    { // Top-down pass
+        std::deque<TreeNode> active;
+        active.push_front(&join_tree);
+
+        while(!active.empty()) {
+            TreeNode node = active.back();
+            active.pop_back();
+
+            for (auto& subtree : node->children) {
+                TreeNode subnode = &subtree;
+
+                subnode->element =
+                    factory->Make<RelationSemijoin>(
+                        Viewed(subnode->element), Viewed(node->element), 3);
+
+                active.push_front(subnode);
+            }
+        }
+    }
+
+    { // Second bottom-up pass
+        std::deque<TreeNode> active(leaf_nodes.begin(), leaf_nodes.end());
+        absl::flat_hash_set<TreeNode> inserted = leaf_nodes;
+
+        while(!active.empty()) {
+            TreeNode node = active.back();
+            active.pop_back();
+
+            if (parent_of.contains(node)) {
+                TreeNode parent = parent_of.at(node);
+
+                parent->element =
+                    factory->Make<RelationSemijoin>(
+                        Viewed(parent->element), Viewed(node->element), 3);
+
+                if (!inserted.contains(parent)) {
+                    active.push_front(parent);
+                    inserted.insert(parent);
+                }
+            }
+        }
+    }
+
+    return join_tree.element;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
