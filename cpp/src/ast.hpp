@@ -24,12 +24,24 @@ template<typename T>
 struct Viewed {
     AttrPartialPermutation perm;
     T rel;
+
+    int32_t Arity() const {
+        int32_t result = 0;
+        for (const auto& attr_maybe : perm) {
+            if (attr_maybe.has_value()) {
+                result++;
+            }
+        }
+        return result;
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Function {
     std::string name;
+    int32_t arguments;
+    int32_t results;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,46 +81,122 @@ struct PredicateEquals : public Predicate {
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Relation {
+    virtual int32_t Arity() const = 0;
 };
+
+struct RelationFactory {
+    std::vector<std::unique_ptr<Relation>> relations;
+
+    template<typename T, typename... Args>
+    T* Make(Args&&... args) {
+        std::unique_ptr<T> value =
+            absl::make_unique<T>(std::forward<Args>(args)...);
+        T* ptr = value.get();
+        relations.push_back(std::move(value));
+        return ptr;
+    }
+};
+
+template<typename S, typename T>
+absl::optional<T*> DynamicCast(S* pointer) {
+    T* casted = dynamic_cast<T*>(pointer);
+    if (casted == nullptr) { return absl::nullopt; }
+    return casted;
+}
 
 struct RelationNot : public Relation {
     Viewed<Relation*> rel;
+
+    int32_t Arity() const override { return rel.Arity(); }
 };
 
 struct RelationJoin : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
     int32_t overlapping;
+
+    int32_t Arity() const override {
+        int32_t lhs_arity = lhs.Arity();
+        int32_t rhs_arity = rhs.Arity();
+        int32_t result_arity = lhs_arity + rhs_arity - overlapping;
+        if (result_arity < 0) {
+            throw "type error got past the typechecker";
+        }
+        return result_arity;
+    }
 };
 
 struct RelationSemiJoin : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
     int32_t overlapping;
+
+    int32_t Arity() const override {
+        int32_t lhs_arity = lhs.Arity();
+        int32_t rhs_arity = rhs.Arity();
+        int32_t result_arity = lhs_arity + rhs_arity - overlapping;
+        if (result_arity < 0) {
+            throw "type error got past the typechecker";
+        }
+        return result_arity;
+    }
 };
 
 struct RelationUnion : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
+
+    int32_t Arity() const override {
+        int32_t lhs_arity = lhs.Arity();
+        int32_t rhs_arity = rhs.Arity();
+        if (lhs_arity != rhs_arity) {
+            throw "type error got past the typechecker";
+        }
+        return lhs_arity;
+    }
 };
 
 struct RelationDifference : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
+
+    int32_t Arity() const override {
+        int32_t lhs_arity = lhs.Arity();
+        int32_t rhs_arity = rhs.Arity();
+        if (lhs_arity != rhs_arity) {
+            throw "type error got past the typechecker";
+        }
+        return lhs_arity;
+    }
 };
 
 struct RelationSelect : public Relation {
     Predicate predicate;
     Viewed<Relation*> rel;
+
+    int32_t Arity() const override {
+        return rel.Arity();
+    }
 };
 
 struct RelationMap : public Relation {
     Function function;
     Viewed<Relation*> rel;
+
+    int32_t Arity() const override {
+        if (function.arguments != rel.Arity()) {
+            throw "type error got past the typechecker";
+        }
+        return function.results;
+    }
 };
 
 struct RelationView : public Relation {
     Viewed<Relation*> rel;
+
+    int32_t Arity() const override {
+        return rel.Arity();
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
