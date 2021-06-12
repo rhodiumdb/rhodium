@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include <absl/container/flat_hash_set.h>
 #include <absl/memory/memory.h>
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_format.h>
@@ -158,24 +159,29 @@ struct RelationNot : public Relation {
 struct RelationJoin : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
-    int32_t overlapping;
+    absl::flat_hash_set<std::pair<Attr, Attr>> attributes;
 
-    RelationJoin(const Viewed<Relation*>& lhs_,
-                 const Viewed<Relation*>& rhs_,
-                 int32_t overlapping_)
-        : lhs(lhs_), rhs(rhs_), overlapping(overlapping_) {}
+    RelationJoin(
+        const Viewed<Relation*>& lhs_,
+        const Viewed<Relation*>& rhs_,
+        const absl::flat_hash_set<std::pair<Attr, Attr>>& attributes_)
+        : lhs(lhs_), rhs(rhs_), attributes(attributes_) {}
 
     std::string ToString() const override {
-        return absl::StrFormat("Join(%s, %s, %d)",
+        std::vector<std::string> attribute_strings;
+        for (const auto& [x, y] : this->attributes) {
+            attribute_strings.push_back(absl::StrFormat("(%d, %d)", x, y));
+        }
+        return absl::StrFormat("Join(%s, %s, [%s])",
                                lhs.ToString(),
                                rhs.ToString(),
-                               overlapping);
+                               absl::StrJoin(attribute_strings, ", "));
     }
 
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
         int32_t rhs_arity = rhs.Arity();
-        int32_t result_arity = lhs_arity + rhs_arity - overlapping;
+        int32_t result_arity = lhs_arity + rhs_arity - attributes.size();
         if (result_arity < 0) {
             // throw "type error got past the typechecker";
         }
@@ -186,24 +192,29 @@ struct RelationJoin : public Relation {
 struct RelationSemijoin : public Relation {
     Viewed<Relation*> lhs;
     Viewed<Relation*> rhs;
-    int32_t overlapping;
+    absl::flat_hash_set<std::pair<Attr, Attr>> attributes;
 
-    RelationSemijoin(const Viewed<Relation*>& lhs_,
-                     const Viewed<Relation*>& rhs_,
-                     int32_t overlapping_)
-        : lhs(lhs_), rhs(rhs_), overlapping(overlapping_) {}
+    RelationSemijoin(
+        const Viewed<Relation*>& lhs_,
+        const Viewed<Relation*>& rhs_,
+        const absl::flat_hash_set<std::pair<Attr, Attr>>& attributes_)
+        : lhs(lhs_), rhs(rhs_), attributes(attributes_) {}
 
     std::string ToString() const override {
-        return absl::StrFormat("Semijoin(%s, %s, %d)",
+        std::vector<std::string> attribute_strings;
+        for (const auto& [x, y] : this->attributes) {
+            attribute_strings.push_back(absl::StrFormat("(%d, %d)", x, y));
+        }
+        return absl::StrFormat("Semijoin(%s, %s, [%s])",
                                lhs.ToString(),
                                rhs.ToString(),
-                               overlapping);
+                               absl::StrJoin(attribute_strings, ", "));
     }
 
     int32_t Arity() const override {
         int32_t lhs_arity = lhs.Arity();
         int32_t rhs_arity = rhs.Arity();
-        int32_t result_arity = lhs_arity + rhs_arity - overlapping;
+        int32_t result_arity = lhs_arity + rhs_arity - attributes.size();
         if (result_arity < 0) {
             // throw "type error got past the typechecker";
         }

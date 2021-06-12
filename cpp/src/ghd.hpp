@@ -647,7 +647,8 @@ Relation* Yannakakis(RelationFactory* factory,
 
                 parent->element =
                     factory->Make<RelationSemijoin>(
-                        Viewed(parent->element), Viewed(node->element), 3);
+                        Viewed(parent->element), Viewed(node->element),
+                        absl::flat_hash_set<std::pair<Attr, Attr>>(/*fixme*/));
 
                 if (!inserted.contains(parent)) {
                     active.push_front(parent);
@@ -670,7 +671,8 @@ Relation* Yannakakis(RelationFactory* factory,
 
                 subnode->element =
                     factory->Make<RelationSemijoin>(
-                        Viewed(subnode->element), Viewed(node->element), 3);
+                        Viewed(subnode->element), Viewed(node->element),
+                        absl::flat_hash_set<std::pair<Attr, Attr>>(/*fixme*/));
 
                 active.push_front(subnode);
             }
@@ -690,7 +692,8 @@ Relation* Yannakakis(RelationFactory* factory,
 
                 parent->element =
                     factory->Make<RelationJoin>(
-                        Viewed(parent->element), Viewed(node->element), 3);
+                        Viewed(parent->element), Viewed(node->element),
+                        absl::flat_hash_set<std::pair<Attr, Attr>>(/*fixme*/));
 
                 if (!inserted.contains(parent)) {
                     active.push_front(parent);
