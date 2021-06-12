@@ -199,17 +199,17 @@ struct Digraph {
     }
 };
 
-template <typename V>
+template <typename V, typename E>
 struct Tree {
     V element;
-    std::vector<Tree> children;
+    std::vector<std::pair<Tree, E>> children;
 
     std::string Print(std::function<std::string(const V&)> callback) const {
         std::stringstream ss;
         ss << "{ \"element\": " << callback(this->element) << ","
            << "  \"children\": [ ";
         std::vector<std::string> cs;
-        for (const auto& child : children) {
+        for (const auto& child : this->children) {
             cs.push_back(child.Print(callback));
         }
         ss << absl::StrJoin(cs, ", ") << " ] }";
@@ -227,19 +227,19 @@ struct Bag {
 
 
 template <typename V>
-absl::optional<Tree<V>> DigraphToTree(Digraph<V>& digraph) {
+absl::optional<Tree<V, absl::monostate>> DigraphToTree(Digraph<V>& digraph) {
     if (digraph.Roots().size() != 1) {
         return absl::nullopt;
     }
 
     NodeId root = *(digraph.Roots().begin());
 
-    std::vector<std::pair<NodeId, Tree<V>*>> active;
+    std::vector<std::pair<NodeId, Tree<V, absl::monostate>*>> active;
     absl::flat_hash_set<NodeId> seen;
 
-    Tree<V> tree { digraph.GetValue(root), { } };
+    Tree<V, absl::monostate> tree { digraph.GetValue(root), { } };
 
-    active.push_back(std::pair<NodeId, Tree<V>*>{ root, &tree });
+    active.push_back(std::pair<NodeId, Tree<V, absl::monostate>*>{ root, &tree });
     while (!active.empty()) {
         auto [source, parent] = active.back();
         active.pop_back();
@@ -249,10 +249,14 @@ absl::optional<Tree<V>> DigraphToTree(Digraph<V>& digraph) {
         seen.insert(source);
 
         for (const auto& target : digraph.EdgesOutOf(source)) {
-            parent->children.push_back(Tree<V>{ digraph.GetValue(target), { } });
+            parent->children.push_back({
+                    Tree<V, absl::monostate> { digraph.GetValue(target), { } },
+                    absl::monostate()
+                });
             // FIXME this is a dirty hack
-            parent->children.back().children.reserve(digraph.EdgesOutOf(target).size());
-            active.push_back({ target, &parent->children.back() });
+            parent->children.back().first.children.reserve(
+                digraph.EdgesOutOf(target).size());
+            active.push_back({ target, &parent->children.back().first });
         }
     }
 
@@ -269,25 +273,26 @@ bool VerifyRunningIntersectionProperty(const Digraph<Bag<V>>& digraph) {
         }
     }
 
-    for (auto attribute : all_attributes) {
+    for (V attribute : all_attributes) {
         absl::flat_hash_set<NodeId> contains_attribute;
         for (NodeId node : digraph.AllNodes()) {
             if (digraph.GetValue(node).attributes.contains(attribute)) {
                 contains_attribute.insert(node);
             }
         }
-        UnionFindMap<NodeId, std::monostate> uf;
+        UnionFindMap<NodeId, absl::monostate> uf;
 
         for (NodeId node : contains_attribute) {
-            uf.Insert(node, std::monostate());
+            uf.Insert(node, absl::monostate());
         }
 
         for (NodeId source : contains_attribute) {
             for (NodeId target : digraph.EdgesOutOf(source)) {
                 if (contains_attribute.contains(target)) {
-                    uf.Union(source, target, [](std::monostate, std::monostate){
-                      return std::monostate();
-                    });
+                    uf.Union(source, target,
+                             [](absl::monostate, absl::monostate) {
+                                 return absl::monostate();
+                             });
                 }
             }
         }
@@ -313,7 +318,7 @@ void LookupInModel(z3::model model,
 template <typename V>
 struct FHD {
     double fhw;
-    Tree<Bag<V>> tree;
+    Tree<Bag<V>, absl::monostate> tree;
 };
 
 template<typename V>
@@ -610,8 +615,8 @@ absl::StatusOr<FHD<V>> ComputeFHD(const Hypergraph<V>& hypergraph) {
 }
 
 Relation* Yannakakis(RelationFactory* factory,
-                     Tree<Relation*> join_tree) {
-    using TreeNode = Tree<Relation*>*;
+                     Tree<Relation*, absl::monostate> join_tree) {
+    using TreeNode = Tree<Relation*, absl::monostate>*;
     absl::flat_hash_map<TreeNode, TreeNode> parent_of;
     absl::flat_hash_set<TreeNode> leaf_nodes;
 
@@ -622,7 +627,7 @@ Relation* Yannakakis(RelationFactory* factory,
             TreeNode node = active.back();
             active.pop_back();
             bool had_children = false;
-            for (auto& subtree : node->children) {
+            for (auto& [subtree, edge_weight] : node->children) {
                 had_children = true;
                 TreeNode subnode = &subtree;
                 parent_of[subnode] = node;
@@ -666,7 +671,7 @@ Relation* Yannakakis(RelationFactory* factory,
             TreeNode node = active.back();
             active.pop_back();
 
-            for (auto& subtree : node->children) {
+            for (auto& [subtree, edge_weight] : node->children) {
                 TreeNode subnode = &subtree;
 
                 subnode->element =
