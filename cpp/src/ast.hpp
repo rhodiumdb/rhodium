@@ -104,6 +104,7 @@ struct PredicateEquals : public Predicate {
 struct Relation {
     virtual std::string ToString() const = 0;
     virtual int32_t Arity() const = 0;
+    virtual ~Relation() = default;
 };
 
 struct RelationFactory {
@@ -347,6 +348,7 @@ struct TypeName {
 
 struct Type {
     virtual std::string ToCpp() const = 0;
+    virtual ~Type() = default;
 };
 
 struct TypeInt : public Type {

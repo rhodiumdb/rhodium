@@ -1,8 +1,8 @@
-{ stdenv, lib, cmake
+{ clangStdenv, lib, cmake
 , abseil-cpp, gtest, z3, highway, rapidcheck
 }:
 
-stdenv.mkDerivation {
+clangStdenv.mkDerivation {
   pname = "rdss";
   version = "0.1";
 
