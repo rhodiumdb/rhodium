@@ -172,10 +172,10 @@ struct RelationJoin : public Relation {
         for (const auto& [x, y] : this->attributes) {
             attribute_strings.push_back(absl::StrFormat("(%d, %d)", x, y));
         }
-        return absl::StrFormat("Join(%s, %s, [%s])",
+        return absl::StrFormat("Join([%s], %s, %s)",
+                               absl::StrJoin(attribute_strings, ", "),
                                lhs.ToString(),
-                               rhs.ToString(),
-                               absl::StrJoin(attribute_strings, ", "));
+                               rhs.ToString());
     }
 
     int32_t Arity() const override {
@@ -205,10 +205,10 @@ struct RelationSemijoin : public Relation {
         for (const auto& [x, y] : this->attributes) {
             attribute_strings.push_back(absl::StrFormat("(%d, %d)", x, y));
         }
-        return absl::StrFormat("Semijoin(%s, %s, [%s])",
+        return absl::StrFormat("Semijoin([%s], %s, %s)",
+                               absl::StrJoin(attribute_strings, ", "),
                                lhs.ToString(),
-                               rhs.ToString(),
-                               absl::StrJoin(attribute_strings, ", "));
+                               rhs.ToString());
     }
 
     int32_t Arity() const override {
