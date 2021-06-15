@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include <absl/container/btree_set.h>
 #include <absl/container/flat_hash_set.h>
 #include <absl/memory/memory.h>
 #include <absl/strings/str_cat.h>
@@ -159,15 +160,17 @@ struct RelationNot : public Relation {
     int32_t Arity() const override { return rel->Arity(); }
 };
 
+using JoinOn = absl::btree_set<std::pair<Attr, Attr>>;
+
 struct RelationJoin : public Relation {
     Relation* lhs;
     Relation* rhs;
-    absl::flat_hash_set<std::pair<Attr, Attr>> attributes;
+    JoinOn attributes;
 
     RelationJoin(
         Relation* lhs_,
         Relation* rhs_,
-        const absl::flat_hash_set<std::pair<Attr, Attr>>& attributes_)
+        const JoinOn& attributes_)
         : lhs(lhs_), rhs(rhs_), attributes(attributes_) {}
 
     std::string ToString() const override {
@@ -195,12 +198,12 @@ struct RelationJoin : public Relation {
 struct RelationSemijoin : public Relation {
     Relation* lhs;
     Relation* rhs;
-    absl::flat_hash_set<std::pair<Attr, Attr>> attributes;
+    JoinOn attributes;
 
     RelationSemijoin(
         Relation* lhs_,
         Relation* rhs_,
-        const absl::flat_hash_set<std::pair<Attr, Attr>>& attributes_)
+        const JoinOn& attributes_)
         : lhs(lhs_), rhs(rhs_), attributes(attributes_) {}
 
     std::string ToString() const override {

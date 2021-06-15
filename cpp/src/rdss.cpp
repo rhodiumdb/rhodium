@@ -83,11 +83,11 @@ void TestGHD() {
 
 void TestYannakakis() {
     RelationFactory fac;
-    Tree<Relation*, absl::monostate> tree {
+    Tree<Relation*, JoinOn> tree {
         fac.Make<RelationReference>("A", 2),
         {
-            { { fac.Make<RelationReference>("B", 2), {} }, absl::monostate() },
-            { { fac.Make<RelationReference>("C", 2), {} }, absl::monostate() }
+            { { fac.Make<RelationReference>("B", 2), {} }, {{0, 0}} },
+            { { fac.Make<RelationReference>("C", 2), {} }, {{1, 0}} }
         }
     };
     std::cerr << Yannakakis(&fac, tree)->ToString() << "\n";

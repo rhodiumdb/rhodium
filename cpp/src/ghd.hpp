@@ -614,10 +614,23 @@ absl::StatusOr<FHD<V>> ComputeFHD(const Hypergraph<V>& hypergraph) {
     return FHD<V> { fhw.value(), tree };
 }
 
+template<typename S, typename T>
+std::pair<T, S> FlipPair(const std::pair<S, T>& pair) {
+    return {pair.second, pair.first};
+}
+
+JoinOn FlipJoinOn(const JoinOn& join_on) {
+    JoinOn result;
+    for (const auto& pair : join_on) {
+        result.insert(FlipPair(pair));
+    }
+    return result;
+}
+
 Relation* Yannakakis(RelationFactory* factory,
-                     Tree<Relation*, absl::monostate> join_tree) {
-    using TreeNode = Tree<Relation*, absl::monostate>*;
-    absl::flat_hash_map<TreeNode, TreeNode> parent_of;
+                     Tree<Relation*, JoinOn> join_tree) {
+    using TreeNode = Tree<Relation*, JoinOn>*;
+    absl::flat_hash_map<TreeNode, std::pair<TreeNode, JoinOn>> parent_of;
     absl::flat_hash_set<TreeNode> leaf_nodes;
 
     { // Compute `parent_of` and `leaf_nodes`
@@ -627,10 +640,10 @@ Relation* Yannakakis(RelationFactory* factory,
             TreeNode node = active.back();
             active.pop_back();
             bool had_children = false;
-            for (auto& [subtree, edge_weight] : node->children) {
+            for (auto& [subtree, join_on] : node->children) {
                 had_children = true;
                 TreeNode subnode = &subtree;
-                parent_of[subnode] = node;
+                parent_of[subnode] = {node, join_on};
                 active.push_back(subnode);
             }
             if (!had_children) {
@@ -648,12 +661,11 @@ Relation* Yannakakis(RelationFactory* factory,
             active.pop_back();
 
             if (parent_of.contains(node)) {
-                TreeNode parent = parent_of.at(node);
+                auto [parent, join_on] = parent_of.at(node);
 
                 parent->element =
                     factory->Make<RelationSemijoin>(
-                        Viewed(parent->element), Viewed(node->element),
-                        absl::flat_hash_set<std::pair<Attr, Attr>>(/*fixme*/));
+                        parent->element, node->element, join_on);
 
                 if (!inserted.contains(parent)) {
                     active.push_front(parent);
@@ -671,13 +683,12 @@ Relation* Yannakakis(RelationFactory* factory,
             TreeNode node = active.back();
             active.pop_back();
 
-            for (auto& [subtree, edge_weight] : node->children) {
+            for (auto& [subtree, join_on] : node->children) {
                 TreeNode subnode = &subtree;
 
                 subnode->element =
                     factory->Make<RelationSemijoin>(
-                        Viewed(subnode->element), Viewed(node->element),
-                        absl::flat_hash_set<std::pair<Attr, Attr>>(/*fixme*/));
+                        subnode->element, node->element, FlipJoinOn(join_on));
 
                 active.push_front(subnode);
             }
@@ -693,12 +704,11 @@ Relation* Yannakakis(RelationFactory* factory,
             active.pop_back();
 
             if (parent_of.contains(node)) {
-                TreeNode parent = parent_of.at(node);
+                auto [parent, join_on] = parent_of.at(node);
 
                 parent->element =
                     factory->Make<RelationJoin>(
-                        Viewed(parent->element), Viewed(node->element),
-                        absl::flat_hash_set<std::pair<Attr, Attr>>(/*fixme*/));
+                        parent->element, node->element, join_on);
 
                 if (!inserted.contains(parent)) {
                     active.push_front(parent);
