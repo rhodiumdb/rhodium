@@ -63,7 +63,7 @@ public:
     }
 
     int32_t NumberOfTuples() const {
-        if ((values.size() % width) != 0) { throw; }
+        RDSS_CHECK((values.size() % width) == 0);
         return values.size() / width;
     }
 

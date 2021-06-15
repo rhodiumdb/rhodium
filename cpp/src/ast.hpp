@@ -29,6 +29,8 @@
 #include <absl/strings/str_join.h>
 #include <absl/types/optional.h>
 
+#include "logging/logging.hpp"
+
 namespace rdss {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -202,9 +204,7 @@ struct RelationJoin : public Relation {
         int32_t lhs_arity = lhs->Arity();
         int32_t rhs_arity = rhs->Arity();
         int32_t result_arity = lhs_arity + rhs_arity - attributes.size();
-        if (result_arity < 0) {
-            throw "type error got past the typechecker";
-        }
+        RDSS_CHECK(result_arity >= 0) << "type error got past the typechecker";
         return result_arity;
     }
 };
@@ -253,9 +253,8 @@ struct RelationUnion : public Relation {
     int32_t Arity() const override {
         int32_t lhs_arity = lhs->Arity();
         int32_t rhs_arity = rhs->Arity();
-        if (lhs_arity != rhs_arity) {
-            throw "type error got past the typechecker";
-        }
+        RDSS_CHECK(lhs_arity == rhs_arity)
+            << "type error got past the typechecker";
         return lhs_arity;
     }
 };
@@ -277,9 +276,8 @@ struct RelationDifference : public Relation {
     int32_t Arity() const override {
         int32_t lhs_arity = lhs->Arity();
         int32_t rhs_arity = rhs->Arity();
-        if (lhs_arity != rhs_arity) {
-            throw "type error got past the typechecker";
-        }
+        RDSS_CHECK(lhs_arity == rhs_arity)
+            << "type error got past the typechecker";
         return lhs_arity;
     }
 };
@@ -318,9 +316,8 @@ struct RelationMap : public Relation {
     }
 
     int32_t Arity() const override {
-        if (function.arguments != rel->Arity()) {
-            throw "type error got past the typechecker";
-        }
+        RDSS_CHECK(function.arguments == rel->Arity())
+            << "type error got past the typechecker";
         return function.results;
     }
 };
