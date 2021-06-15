@@ -215,13 +215,7 @@ struct RelationSemijoin : public Relation {
     }
 
     int32_t Arity() const override {
-        int32_t lhs_arity = lhs.Arity();
-        int32_t rhs_arity = rhs.Arity();
-        int32_t result_arity = lhs_arity + rhs_arity - attributes.size();
-        if (result_arity < 0) {
-            // throw "type error got past the typechecker";
-        }
-        return result_arity;
+        return lhs.Arity();
     }
 };
 
