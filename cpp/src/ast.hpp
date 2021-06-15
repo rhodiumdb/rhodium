@@ -89,34 +89,67 @@ struct Function {
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Predicate {
+    virtual std::string ToString() const = 0;
     virtual ~Predicate() = default;
 };
 
 struct PredicateAnd : public Predicate {
     std::vector<Predicate*> children;
+
+    std::string ToString() const override {
+        std::vector<std::string> child_strings;
+        for (Predicate* child : children) {
+            child_strings.push_back(child->ToString());
+        }
+        return absl::StrCat("(", absl::StrJoin(child_strings, " && "), ")");
+    }
 };
 
 struct PredicateOr : public Predicate {
     std::vector<Predicate*> children;
+
+    std::string ToString() const override {
+        std::vector<std::string> child_strings;
+        for (Predicate* child : children) {
+            child_strings.push_back(child->ToString());
+        }
+        return absl::StrCat("(", absl::StrJoin(child_strings, " || "), ")");
+    }
 };
 
 struct PredicateNot : public Predicate {
     Predicate* pred;
+
+    std::string ToString() const override {
+        return absl::StrCat("!", pred->ToString());
+    }
 };
 
 struct PredicateLike : public Predicate {
     Attr attr;
     std::string string;
+
+    std::string ToString() const override {
+        return absl::StrFormat("(attr%d LIKE \"%s\")", attr, string);
+    }
 };
 
 struct PredicateLessThan : public Predicate {
     Attr attr;
     int32_t integer;
+
+    std::string ToString() const override {
+        return absl::StrFormat("(attr%d < %d)", attr, integer);
+    }
 };
 
 struct PredicateEquals : public Predicate {
     Attr attr;
     int32_t integer;
+
+    std::string ToString() const override {
+        return absl::StrFormat("(attr%d ≡ %d)", attr, integer);
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
