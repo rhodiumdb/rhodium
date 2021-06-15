@@ -93,8 +93,25 @@ struct Predicate {
     virtual ~Predicate() = default;
 };
 
+struct PredicateFactory {
+    std::vector<std::unique_ptr<Predicate>> predicates;
+
+    template<typename T, typename... Args>
+    T* Make(Args&&... args) {
+        std::unique_ptr<T> value =
+            absl::make_unique<T>(std::forward<Args>(args)...);
+        T* ptr = value.get();
+        predicates.push_back(std::move(value));
+        return ptr;
+    }
+};
+
 struct PredicateAnd : public Predicate {
     std::vector<Predicate*> children;
+
+    explicit PredicateAnd(
+        absl::Span<Predicate* const> children_)
+        : children(children_.begin(), children_.end()) {}
 
     std::string ToString() const override {
         std::vector<std::string> child_strings;
@@ -108,6 +125,10 @@ struct PredicateAnd : public Predicate {
 struct PredicateOr : public Predicate {
     std::vector<Predicate*> children;
 
+    explicit PredicateOr(
+        absl::Span<Predicate* const> children_)
+        : children(children_.begin(), children_.end()) {}
+
     std::string ToString() const override {
         std::vector<std::string> child_strings;
         for (Predicate* child : children) {
@@ -120,6 +141,9 @@ struct PredicateOr : public Predicate {
 struct PredicateNot : public Predicate {
     Predicate* pred;
 
+    explicit PredicateNot(Predicate* pred_)
+        : pred(pred_) {}
+
     std::string ToString() const override {
         return absl::StrCat("!", pred->ToString());
     }
@@ -128,6 +152,9 @@ struct PredicateNot : public Predicate {
 struct PredicateLike : public Predicate {
     Attr attr;
     std::string string;
+
+    PredicateLike(Attr attr_, const std::string& string_)
+        : attr(attr_), string(string_) {}
 
     std::string ToString() const override {
         return absl::StrFormat("(attr%d LIKE \"%s\")", attr, string);
@@ -138,6 +165,9 @@ struct PredicateLessThan : public Predicate {
     Attr attr;
     int32_t integer;
 
+    PredicateLessThan(Attr attr_, int32_t integer_)
+        : attr(attr_), integer(integer_) {}
+
     std::string ToString() const override {
         return absl::StrFormat("(attr%d < %d)", attr, integer);
     }
@@ -146,6 +176,9 @@ struct PredicateLessThan : public Predicate {
 struct PredicateEquals : public Predicate {
     Attr attr;
     int32_t integer;
+
+    PredicateEquals(Attr attr_, int32_t integer_)
+        : attr(attr_), integer(integer_) {}
 
     std::string ToString() const override {
         return absl::StrFormat("(attr%d ≡ %d)", attr, integer);
