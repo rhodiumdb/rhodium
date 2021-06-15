@@ -87,7 +87,7 @@ absl::Status Interpreter::Interpret(Relation* input) {
         context.insert_or_assign(input, variables.at(r.value()->name));
     } else if (auto r = DynamicCast<Relation, RelationNot>(input)) {
         RETURN_IF_ERROR(Interpret(r.value()->rel));
-        return absl::InternalError("Interpreter doesn't support Not");
+        return absl::InternalError("Interpreter cannot support Not");
     } else if (auto r = DynamicCast<Relation, RelationJoin>(input)) {
         RETURN_IF_ERROR(Interpret(r.value()->lhs));
         RETURN_IF_ERROR(Interpret(r.value()->rhs));
@@ -150,9 +150,22 @@ absl::Status Interpreter::Interpret(Relation* input) {
             }
         }
         context.insert_or_assign(input, result);
+    } else if (auto r = DynamicCast<Relation, RelationUnion>(input)) {
+        return absl::InternalError("Have not yet implemented Union");
+    } else if (auto r = DynamicCast<Relation, RelationDifference>(input)) {
+        return absl::InternalError("Have not yet implemented Difference");
+    } else if (auto r = DynamicCast<Relation, RelationSelect>(input)) {
+        return absl::InternalError("Have not yet implemented Select");
+    } else if (auto r = DynamicCast<Relation, RelationMap>(input)) {
+        return absl::InternalError("Interpreter cannot support Map");
+    } else if (auto r = DynamicCast<Relation, RelationView>(input)) {
+        return absl::InternalError("Have not yet implemented View");
     } else {
-        return absl::InternalError("Have not yet implemented operation");
+        return absl::InternalError(
+            "If this is reached, a new relation op has been added but no case "
+            "was added to the interpreter. Please add one.");
     }
+
     return absl::OkStatus();
 }
 
