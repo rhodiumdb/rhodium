@@ -1,3 +1,4 @@
+// Copyright 2021 The RDSS Authors
 // Copyright 2020 The XLS Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,4 +69,4 @@ absl::StatusOr<std::string> GetFileContents(
 
 } // namespace rdss
 
-#endif // RDS_FILESYSTEM_H_
+#endif  // RDSS_FILESYSTEM_H_

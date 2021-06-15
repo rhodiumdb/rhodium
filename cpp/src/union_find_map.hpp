@@ -1,3 +1,4 @@
+// Copyright 2021 The RDSS Authors
 // Copyright 2021 The XLS Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -175,4 +176,4 @@ class UnionFindMap {
 
 }  // namespace rdss
 
-#endif  // UNION_FIND_MAP_H_
+#endif  // RDSS_UNION_FIND_MAP_H_
