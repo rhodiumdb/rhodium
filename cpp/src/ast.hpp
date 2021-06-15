@@ -89,20 +89,19 @@ struct Function {
 ////////////////////////////////////////////////////////////////////////////////
 
 struct Predicate {
+    virtual ~Predicate() = default;
 };
 
 struct PredicateAnd : public Predicate {
-    Predicate lhs;
-    Predicate rhs;
+    std::vector<Predicate*> children;
 };
 
 struct PredicateOr : public Predicate {
-    Predicate lhs;
-    Predicate rhs;
+    std::vector<Predicate*> children;
 };
 
 struct PredicateNot : public Predicate {
-    Predicate rel;
+    Predicate* pred;
 };
 
 struct PredicateLike : public Predicate {
@@ -283,10 +282,10 @@ struct RelationDifference : public Relation {
 };
 
 struct RelationSelect : public Relation {
-    Predicate predicate;
+    Predicate* predicate;
     Relation* rel;
 
-    RelationSelect(const Predicate& predicate_,
+    RelationSelect(Predicate* predicate_,
                    Relation* rel_)
         : predicate(predicate_), rel(rel_) {}
 

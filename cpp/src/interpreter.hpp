@@ -37,14 +37,16 @@
 
 namespace rdss {
 
+using Value = int32_t;
+
+using Tuple = std::vector<Value>;
+
 class Table {
 public:
-    using Value = int32_t;
-
     Table(int32_t width_) : width(width_), values() {}
 
-    std::vector<Value> GetTuple(int32_t index) const {
-        std::vector<Value> result;
+    Tuple GetTuple(int32_t index) const {
+        Tuple result;
         for (int32_t i = 0; i < width; i++) {
             result.push_back(values.at(index * width + i));
         }
@@ -73,15 +75,43 @@ public:
 
 private:
     int32_t width;
-    std::vector<int32_t> values;
+    std::vector<Value> values;
 };
+
+bool InterpretPredicate(Predicate* predicate,
+                        const Tuple& tuple) {
+    if (auto p = DynamicCast<Predicate, PredicateAnd>(predicate)) {
+        bool result = true;
+        for (Predicate* child : p.value()->children) {
+            result &= InterpretPredicate(child, tuple);
+        }
+        return result;
+    } else if (auto p = DynamicCast<Predicate, PredicateOr>(predicate)) {
+        bool result = false;
+        for (Predicate* child : p.value()->children) {
+            result |= InterpretPredicate(child, tuple);
+        }
+        return result;
+    } else if (auto p = DynamicCast<Predicate, PredicateNot>(predicate)) {
+        return !InterpretPredicate(p.value()->pred, tuple);
+    } else if (auto p = DynamicCast<Predicate, PredicateLike>(predicate)) {
+        RDSS_CHECK(false) << "InterpretPredicate does not yet support LIKE";
+    } else if (auto p = DynamicCast<Predicate, PredicateLessThan>(predicate)) {
+        return tuple[p.value()->attr] < p.value()->integer;
+    } else if (auto p = DynamicCast<Predicate, PredicateEquals>(predicate)) {
+        return tuple[p.value()->attr] == p.value()->integer;
+    } else {
+        RDSS_CHECK(false)
+            << "If this is reached, a new predicate has been added but no "
+            << "case was added to the interpreter. Please add one.";
+    }
+}
 
 class Interpreter {
 public:
     Interpreter(const absl::btree_map<std::string, Table>& variables_)
         : variables(variables_) {}
 
-    absl::Status Interpret(const Viewed<Relation*>& input);
     absl::Status Interpret(Relation* input);
 
     absl::optional<Table> Lookup(Relation* input) {
@@ -123,8 +153,8 @@ absl::Status Interpreter::Interpret(Relation* input) {
                     rhs_nonincluded.insert(y);
                 }
                 if (add) {
-                    std::vector<int32_t> result_tuple;
-                    for (int32_t value : lhs_tuple) {
+                    Tuple result_tuple;
+                    for (Value value : lhs_tuple) {
                         result_tuple.push_back(value);
                     }
                     for (int32_t k = 0; k < rhs->Width(); k++) {
@@ -143,11 +173,11 @@ absl::Status Interpreter::Interpret(Relation* input) {
 
         auto lhs = &context.at(r.value()->lhs);
         auto rhs = &context.at(r.value()->rhs);
-        absl::flat_hash_set<std::vector<int32_t>> restricted_rhs;
-        Table result(lhs->Width());
+        absl::flat_hash_set<Tuple> restricted_rhs;
+        Table result(r.value()->Arity());
         for (int32_t i = 0; i < rhs->NumberOfTuples(); i++) {
             auto tuple = rhs->GetTuple(i);
-            std::vector<int32_t> restricted_tuple;
+            Tuple restricted_tuple;
             for (const auto& [x, y] : r.value()->attributes) {
                 restricted_tuple.push_back(tuple[y]);
             }
@@ -155,7 +185,7 @@ absl::Status Interpreter::Interpret(Relation* input) {
         }
         for (int32_t i = 0; i < lhs->NumberOfTuples(); i++) {
             auto tuple = lhs->GetTuple(i);
-            std::vector<int32_t> restricted_tuple;
+            Tuple restricted_tuple;
             for (const auto& [x, y] : r.value()->attributes) {
                 restricted_tuple.push_back(tuple[x]);
             }
@@ -165,25 +195,88 @@ absl::Status Interpreter::Interpret(Relation* input) {
         }
         context.insert_or_assign(input, result);
     } else if (auto r = DynamicCast<Relation, RelationUnion>(input)) {
-        return absl::InternalError("Have not yet implemented Union");
+        RETURN_IF_ERROR(Interpret(r.value()->lhs));
+        RETURN_IF_ERROR(Interpret(r.value()->rhs));
+
+        auto lhs = &context.at(r.value()->lhs);
+        auto rhs = &context.at(r.value()->rhs);
+
+        Table result(r.value()->Arity());
+        for (int32_t i = 0; i < lhs->NumberOfTuples(); i++) {
+            RETURN_IF_ERROR(result.InsertTuple(lhs->GetTuple(i)));
+        }
+        for (int32_t i = 0; i < rhs->NumberOfTuples(); i++) {
+            RETURN_IF_ERROR(result.InsertTuple(rhs->GetTuple(i)));
+        }
+
+        context.insert_or_assign(input, result);
     } else if (auto r = DynamicCast<Relation, RelationDifference>(input)) {
-        return absl::InternalError("Have not yet implemented Difference");
+        RETURN_IF_ERROR(Interpret(r.value()->lhs));
+        RETURN_IF_ERROR(Interpret(r.value()->rhs));
+
+        auto lhs = &context.at(r.value()->lhs);
+        auto rhs = &context.at(r.value()->rhs);
+
+
+        absl::flat_hash_set<std::vector<Value>> tuples_in_rhs;
+        for (int32_t i = 0; i < rhs->NumberOfTuples(); i++) {
+            tuples_in_rhs.insert(rhs->GetTuple(i));
+        }
+
+        Table result(r.value()->Arity());
+        for (int32_t i = 0; i < lhs->NumberOfTuples(); i++) {
+            auto tuple = lhs->GetTuple(i);
+            if (!tuples_in_rhs.contains(tuple)) {
+                RETURN_IF_ERROR(result.InsertTuple(tuple));
+            }
+        }
+
+        context.insert_or_assign(input, result);
     } else if (auto r = DynamicCast<Relation, RelationSelect>(input)) {
-        return absl::InternalError("Have not yet implemented Select");
+        RETURN_IF_ERROR(Interpret(r.value()->rel));
+
+        auto predicate = r.value()->predicate;
+        auto rel = &context.at(r.value()->rel);
+
+        Table result(r.value()->Arity());
+        for (int32_t i = 0; i < rel->NumberOfTuples(); i++) {
+            auto tuple = rel->GetTuple(i);
+            if (InterpretPredicate(predicate, tuple)) {
+                RETURN_IF_ERROR(result.InsertTuple(tuple));
+            }
+        }
+
+        context.insert_or_assign(input, result);
     } else if (auto r = DynamicCast<Relation, RelationMap>(input)) {
         return absl::InternalError("Interpreter cannot support Map");
     } else if (auto r = DynamicCast<Relation, RelationView>(input)) {
-        return absl::InternalError("Have not yet implemented View");
+        RETURN_IF_ERROR(Interpret(r.value()->rel.rel));
+
+        auto perm = r.value()->rel.perm;
+        auto rel = &context.at(r.value()->rel.rel);
+
+        Table result(r.value()->Arity());
+        for (int32_t i = 0; i < rel->NumberOfTuples(); i++) {
+            Tuple input_tuple = rel->GetTuple(i);
+            Tuple output_tuple;
+            output_tuple.resize(result.Width(), Value());
+            int32_t j = 0;
+            for (absl::optional<Attr> attr_maybe : perm) {
+                if (attr_maybe) {
+                    output_tuple[*attr_maybe] = input_tuple[j];
+                }
+                j++;
+            }
+            RETURN_IF_ERROR(result.InsertTuple(output_tuple));
+        }
+
+        context.insert_or_assign(input, result);
     } else {
         return absl::InternalError(
             "If this is reached, a new relation op has been added but no case "
             "was added to the interpreter. Please add one.");
     }
 
-    return absl::OkStatus();
-}
-
-absl::Status Interpreter::Interpret(const Viewed<Relation*>& input) {
     return absl::OkStatus();
 }
 
