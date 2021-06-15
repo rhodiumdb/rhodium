@@ -44,6 +44,9 @@ struct Viewed {
         }
         std::string perm_string =
             absl::StrFormat("[%s]", absl::StrJoin(strings, ", "));
+        if (Viewed(rel).perm == perm) {
+            return rel->ToString();
+        }
         return absl::StrFormat("Viewed(%s, %s)", perm_string, rel->ToString());
     }
 
