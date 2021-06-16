@@ -10,7 +10,7 @@
 #include "../src/ghd.hpp"
 
 absl::optional<rdss::Hypergraph<std::string>>
-parse_hg(absl::string_view input) {
+ParseHG(absl::string_view input) {
     rdss::Hypergraph<std::string> graph;
 
     std::vector<absl::string_view> lines = absl::StrSplit(input, '\n');
@@ -47,7 +47,7 @@ parse_hg(absl::string_view input) {
     return graph;
 }
 
-void test_graph(
+void TestGraph(
     const std::filesystem::path& hg_path,
     const std::filesystem::path& opt_path
 ) {
@@ -56,7 +56,7 @@ void test_graph(
         std::cerr << graph_str.status();
         FAIL();
     }
-    auto parsed_graph = parse_hg(*graph_str);
+    auto parsed_graph = ParseHG(*graph_str);
     EXPECT_TRUE(parsed_graph.has_value());
 
     absl::StatusOr<std::string> fhw_result_str = rdss::GetFileContents(opt_path);
@@ -65,8 +65,7 @@ void test_graph(
         FAIL();
     }
     double fhw_opt;
-    absl::string_view fhw_result_str_view = *fhw_result_str;
-    auto parsed_fhw_result = absl::SimpleAtod(fhw_result_str_view, &fhw_opt);
+    auto parsed_fhw_result = absl::SimpleAtod(fhw_result_str.value(), &fhw_opt);
     EXPECT_TRUE(parsed_fhw_result);
 
     auto computed_fhw = rdss::ComputeFHD(parsed_graph.value());
@@ -76,25 +75,28 @@ void test_graph(
 }
 
 TEST(FHD, c4) {
-    test_graph("../test/graphs/c4.hg", "../test/graphs/c4.opt");
+    TestGraph("../test/graphs/c4.hg", "../test/graphs/c4.opt");
 }
 
 TEST(FHD, triangle) {
-    test_graph("../test/graphs/triangle.hg", "../test/graphs/triangle.opt");
+    TestGraph("../test/graphs/triangle.hg", "../test/graphs/triangle.opt");
 }
 
-TEST (FHD, imdb_q13a) {
-    test_graph("../test/graphs/imdb-q13a.hg", "../test/graphs/imdb-q13a.opt");
+TEST(FHD, imdb_q13a) {
+    TestGraph("../test/graphs/imdb-q13a.hg", "../test/graphs/imdb-q13a.opt");
 }
 
-TEST (FHD, tpch_manual_q10_min) {
-    test_graph("../test/graphs/tpch-manual-q10-min.hg", "../test/graphs/tpch-manual-q10-min.opt");
+TEST(FHD, tpch_manual_q10_min) {
+    TestGraph("../test/graphs/tpch-manual-q10-min.hg",
+              "../test/graphs/tpch-manual-q10-min.opt");
 }
 
-TEST (FHD, tpch_manual_q10) {
-    test_graph("../test/graphs/tpch-manual-q10.hg", "../test/graphs/tpch-manual-q10.opt");
+TEST(FHD, tpch_manual_q10) {
+    TestGraph("../test/graphs/tpch-manual-q10.hg",
+              "../test/graphs/tpch-manual-q10.opt");
 }
 
-TEST (FHD, tpch_synthetic_q5) {
-    test_graph("../test/graphs/tpch-synthetic-q5.hg", "../test/graphs/tpch-synthetic-q5.opt");
+TEST(FHD, tpch_synthetic_q5) {
+    TestGraph("../test/graphs/tpch-synthetic-q5.hg",
+              "../test/graphs/tpch-synthetic-q5.opt");
 }

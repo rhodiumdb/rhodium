@@ -36,20 +36,17 @@ static std::string Indent(std::string str, int32_t n = 1) {
 }
 
 std::string Member::ToCpp() const {
-    return absl::StrCat(this->type->ToCpp(), " ", this->name.ToCpp(), ";\n");
+    return absl::StrFormat("%s %s;\n", this->type->ToCpp(), this->name.ToCpp());
 }
 
-/*
-<type> <name>(<arg1>, <arg2>, ..., <argN>)
-*/
+// <type> <name>(<arg1>, <arg2>, ..., <argN>)
 std::string Method::ToCpp() const {
     std::vector<absl::string_view> args_vec;
     for (int32_t i = 0; i < this->arguments.size(); i++) {
         args_vec[i] = absl::StrCat(
             this->arguments[i].first.ToCpp(),
             " ",
-            this->arguments[i].second->ToCpp()
-        );
+            this->arguments[i].second->ToCpp());
     }
 
     auto args = absl::StrJoin(args_vec, ", ");
@@ -61,15 +58,8 @@ std::string Method::ToCpp() const {
 
     auto body = absl::StrJoin(body_vec, ";\n");
 
-    return absl::StrCat(
-        "void ",
-        this->name.ToCpp(),
-        " (",
-        args,
-        ") { ",
-        body,
-        "}"
-    );
+    return absl::StrFormat("void %s(%s) { %s }",
+                           this->name.ToCpp(), args, body);
 }
 
 std::string DataStructure::ToCpp() const {

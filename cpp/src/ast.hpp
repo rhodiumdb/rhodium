@@ -269,7 +269,7 @@ struct RelationJoin : public Relation {
         int32_t lhs_arity = lhs->Arity();
         int32_t rhs_arity = rhs->Arity();
         int32_t result_arity = lhs_arity + rhs_arity - attributes.size();
-        RDSS_CHECK(result_arity >= 0) << "type error got past the typechecker";
+        RDSS_CHECK_GE(result_arity, 0) << "type error got past the typechecker";
         return result_arity;
     }
 };
@@ -318,7 +318,7 @@ struct RelationUnion : public Relation {
     int32_t Arity() const override {
         int32_t lhs_arity = lhs->Arity();
         int32_t rhs_arity = rhs->Arity();
-        RDSS_CHECK(lhs_arity == rhs_arity)
+        RDSS_CHECK_EQ(lhs_arity, rhs_arity)
             << "type error got past the typechecker";
         return lhs_arity;
     }
@@ -341,7 +341,7 @@ struct RelationDifference : public Relation {
     int32_t Arity() const override {
         int32_t lhs_arity = lhs->Arity();
         int32_t rhs_arity = rhs->Arity();
-        RDSS_CHECK(lhs_arity == rhs_arity)
+        RDSS_CHECK_EQ(lhs_arity, rhs_arity)
             << "type error got past the typechecker";
         return lhs_arity;
     }
@@ -381,7 +381,7 @@ struct RelationMap : public Relation {
     }
 
     int32_t Arity() const override {
-        RDSS_CHECK(function.arguments == rel->Arity())
+        RDSS_CHECK_EQ(function.arguments, rel->Arity())
             << "type error got past the typechecker";
         return function.results;
     }
@@ -407,8 +407,7 @@ struct RelationView : public Relation {
 struct TypeParameter {
     std::string name;
 
-    TypeParameter(std::string name) : name(name) {}
-    TypeParameter(const char* name) : name(name) {}
+    TypeParameter(absl::string_view name_) : name(name_.begin(), name_.end()) {}
 
     std::string ToCpp() const { return this->name; }
 };
@@ -416,8 +415,7 @@ struct TypeParameter {
 struct VarName {
     std::string name;
 
-    VarName(std::string name) : name(name) {}
-    VarName(const char* name) : name(name) {}
+    VarName(absl::string_view name_) : name(name_.begin(), name_.end()) {}
 
     std::string ToCpp() const { return this->name; }
 };
@@ -425,8 +423,7 @@ struct VarName {
 struct TypeName {
     std::string name;
 
-    TypeName(std::string name) : name(name) {}
-    TypeName(const char* name) : name(name) {}
+    TypeName(absl::string_view name_) : name(name_.begin(), name_.end()) {}
 
     std::string ToCpp() const { return this->name; }
 };
