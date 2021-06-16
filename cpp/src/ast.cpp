@@ -56,7 +56,7 @@ std::string Method::ToCpp() const {
 
     std::vector<absl::string_view> body_vec;
     for (int32_t i = 0; i < this->body.size(); i++) {
-        body_vec[i] = Indent(this->body[i].ToCpp());
+        body_vec[i] = Indent(this->body[i]->ToCpp());
     }
 
     auto body = absl::StrJoin(body_vec, ";\n");

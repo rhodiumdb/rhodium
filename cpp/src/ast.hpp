@@ -453,14 +453,14 @@ struct TypeBasic : public Type {
 };
 
 struct TypeRow : public Type {
-    std::vector<Type> elements;
+    std::vector<Type*> elements;
 
     std::string ToCpp() const override {
         std::stringstream ss;
         ss << "std::tuple<";
         std::vector<std::string> types;
         for (const auto& type : this->elements) {
-            types.push_back(type.ToCpp());
+            types.push_back(type->ToCpp());
         }
         ss << absl::StrJoin(types, ", ") << ">";
         return ss.str();
@@ -468,7 +468,7 @@ struct TypeRow : public Type {
 };
 
 struct TypeHashSet : public Type {
-    std::unique_ptr<Type> element;
+    Type* element;
 
     std::string ToCpp() const override {
         return absl::StrCat("absl::flat_hash_set<",
@@ -477,8 +477,8 @@ struct TypeHashSet : public Type {
 };
 
 struct TypeHashMap : public Type {
-    std::unique_ptr<Type> key;
-    std::unique_ptr<Type> value;
+    Type* key;
+    Type* value;
 
     std::string ToCpp() const override {
         return absl::StrCat("absl::flat_hash_map<",
@@ -488,8 +488,8 @@ struct TypeHashMap : public Type {
 };
 
 struct TypeTrie : public Type {
-    std::unique_ptr<Type> key;
-    std::unique_ptr<Type> value;
+    Type* key;
+    Type* value;
 
     std::string ToCpp() const override {
         return absl::StrCat("trie<",
@@ -499,7 +499,7 @@ struct TypeTrie : public Type {
 };
 
 struct TypeVector : public Type {
-    std::unique_ptr<Type> element;
+    Type* element;
 
     std::string ToCpp() const override {
         return absl::StrCat("std::vector<", this->element->ToCpp(), ">");
@@ -587,7 +587,7 @@ struct ActionDeleteHashSet : public Action {
 
 struct ActionIterateOverHashSet : public Action {
     VarName hash_set;
-    std::function<std::vector<Action>(VarName)> body;
+    std::function<std::vector<Action*>(VarName)> body;
 
     std::string ToCpp() const {
         return "";
@@ -623,7 +623,7 @@ struct ActionDeleteHashMap : public Action {
 
 struct ActionIterateOverHashMap : public Action {
     VarName hash_map;
-    std::function<std::vector<Action>(VarName, VarName)> body;
+    std::function<std::vector<Action*>(VarName, VarName)> body;
 
     std::string ToCpp() const {
         return "";
@@ -661,7 +661,7 @@ struct ActionDeleteTrie : public Action {
 
 struct Member {
     VarName name;
-    std::unique_ptr<Type> type;
+    Type* type;
 
     std::string ToCpp() const;
 };
@@ -670,8 +670,8 @@ struct Member {
 
 struct Method {
     VarName name;
-    std::vector<std::pair<VarName, std::unique_ptr<Type>>> arguments;
-    std::vector<Action> body;
+    std::vector<std::pair<VarName, Type*>> arguments;
+    std::vector<Action*> body;
 
     explicit Method(VarName name) : name(name) {}
 
