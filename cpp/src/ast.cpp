@@ -35,12 +35,12 @@ static std::string Indent(std::string str, int32_t n = 1) {
     return ss.str();
 }
 
-std::string Member::ToCpp() const {
+std::string Member::ToCpp(FreshVariableSource* source) const {
     return absl::StrFormat("%s %s;\n", this->type->ToCpp(), this->name.ToCpp());
 }
 
 // <type> <name>(<arg1>, <arg2>, ..., <argN>)
-std::string Method::ToCpp() const {
+std::string Method::ToCpp(FreshVariableSource* source) const {
     std::vector<absl::string_view> args_vec;
     for (int32_t i = 0; i < this->arguments.size(); i++) {
         args_vec[i] = absl::StrCat(
@@ -53,7 +53,7 @@ std::string Method::ToCpp() const {
 
     std::vector<absl::string_view> body_vec;
     for (int32_t i = 0; i < this->body.size(); i++) {
-        body_vec[i] = Indent(this->body[i]->ToCpp());
+        body_vec[i] = Indent(this->body[i]->ToCpp(source));
     }
 
     auto body = absl::StrJoin(body_vec, ";\n");
@@ -62,7 +62,7 @@ std::string Method::ToCpp() const {
                            this->name.ToCpp(), args, body);
 }
 
-std::string DataStructure::ToCpp() const {
+std::string DataStructure::ToCpp(FreshVariableSource* source) const {
     std::stringstream ss;
     if (!this->type_parameters.empty()) {
         ss << "template<";
@@ -75,10 +75,10 @@ std::string DataStructure::ToCpp() const {
     }
     ss << "struct " << this->name << " {\n";
     for (const auto& member : this->members) {
-        ss << Indent(member.ToCpp());
+        ss << Indent(member.ToCpp(source));
     }
     for (const auto& method : this->methods) {
-        ss << Indent(method.ToCpp());
+        ss << Indent(method.ToCpp(source));
     }
     ss << "}\n";
     return ss.str();

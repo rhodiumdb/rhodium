@@ -250,7 +250,8 @@ absl::Status RealMain() {
     //         VarName("foo"),
     //         absl::make_unique<TypeVector>(absl::make_unique<TypeInt>())
     //     });
-    std::cout << example.ToCpp();
+    FreshVariableSource source;
+    std::cout << example.ToCpp(&source);
 
     TestGHD();
     RETURN_IF_ERROR(TestYannakakis());
