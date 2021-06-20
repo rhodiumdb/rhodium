@@ -27,6 +27,7 @@
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
 #include <absl/types/optional.h>
 
 #include "logging/logging.hpp"
@@ -518,6 +519,21 @@ struct TypeVector : public Type {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+inline std::string Indent(absl::string_view str, int32_t n) {
+    std::vector<absl::string_view> lines = absl::StrSplit(str, '\n');
+    std::string indent;
+    indent.resize(4 * n, ' ');
+    std::stringstream ss;
+    for (auto line : lines) {
+        if (!line.empty()) {
+            ss << indent << line << "\n";
+        }
+    }
+    return ss.str();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 // TODO: created Typed<T> to streamline access to type information
 
 struct Action {
@@ -666,7 +682,8 @@ struct ActionIterateOverHashSet : public Action {
         auto value = source->Fresh();
         std::string body_string;
         for (const auto& action : this->body(value)) {
-            absl::StrAppend(&body_string, action->ToCpp(source), "\n");
+            absl::StrAppend(
+                &body_string, Indent(action->ToCpp(source), 1), "\n");
         }
         return absl::StrFormat("for (const auto& %s : %s) {%s}",
                                value.ToCpp(),

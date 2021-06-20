@@ -22,43 +22,28 @@
 
 namespace rdss {
 
-static std::string Indent(std::string str, int32_t n = 1) {
-    std::vector<absl::string_view> lines = absl::StrSplit(str, '\n');
-    std::string indent;
-    indent.resize(4 * n, ' ');
-    std::stringstream ss;
-    for (auto line : lines) {
-        if (!line.empty()) {
-            ss << indent << line << "\n";
-        }
-    }
-    return ss.str();
-}
-
 std::string Member::ToCpp(FreshVariableSource* source) const {
     return absl::StrFormat("%s %s;\n", this->type->ToCpp(), this->name.ToCpp());
 }
 
 // <type> <name>(<arg1>, <arg2>, ..., <argN>)
 std::string Method::ToCpp(FreshVariableSource* source) const {
-    std::vector<absl::string_view> args_vec;
+    std::vector<std::string> args_vec;
     for (int32_t i = 0; i < this->arguments.size(); i++) {
-        args_vec[i] = absl::StrCat(
-            this->arguments[i].first.ToCpp(),
-            " ",
-            this->arguments[i].second->ToCpp());
+        args_vec.push_back(absl::StrCat(
+                               this->arguments[i].first.ToCpp(),
+                               " ",
+                               this->arguments[i].second->ToCpp()));
     }
 
     auto args = absl::StrJoin(args_vec, ", ");
 
-    std::vector<absl::string_view> body_vec;
+    std::string body;
     for (int32_t i = 0; i < this->body.size(); i++) {
-        body_vec[i] = Indent(this->body[i]->ToCpp(source));
+        absl::StrAppend(&body, Indent(this->body[i]->ToCpp(source), 1), "\n");
     }
 
-    auto body = absl::StrJoin(body_vec, ";\n");
-
-    return absl::StrFormat("void %s(%s) { %s }",
+    return absl::StrFormat("void %s(%s) {\n%s}",
                            this->name.ToCpp(), args, body);
 }
 
@@ -75,10 +60,10 @@ std::string DataStructure::ToCpp(FreshVariableSource* source) const {
     }
     ss << "struct " << this->name << " {\n";
     for (const auto& member : this->members) {
-        ss << Indent(member.ToCpp(source));
+        ss << Indent(member.ToCpp(source), 1);
     }
     for (const auto& method : this->methods) {
-        ss << Indent(method.ToCpp(source));
+        ss << Indent(method.ToCpp(source), 1);
     }
     ss << "}\n";
     return ss.str();

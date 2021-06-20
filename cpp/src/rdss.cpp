@@ -250,6 +250,12 @@ absl::Status RealMain() {
     //         VarName("foo"),
     //         absl::make_unique<TypeVector>(absl::make_unique<TypeInt>())
     //     });
+    rdss::Method method(VarName("example"));
+
+    method.body.push_back(new ActionGetMember {
+            VarName("foo"), VarName("bar"), VarName("baz")
+        });
+    example.methods.push_back(method);
     FreshVariableSource source;
     std::cout << example.ToCpp(&source);
 
