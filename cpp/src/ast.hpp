@@ -560,6 +560,33 @@ struct ActionGetMember : public Action {
     }
 };
 
+struct ActionIfEquals : public Action {
+    std::vector<std::pair<VarName, VarName>> equalities;
+    std::vector<Action*> body;
+
+    ActionIfEquals(absl::Span<std::pair<VarName, VarName> const> equalities_,
+                   absl::Span<Action* const> body_)
+        : equalities(equalities_.begin(), equalities_.end())
+        , body(body_.begin(), body_.end()) {}
+
+    std::string ToCpp(FreshVariableSource* source) const override {
+        std::vector<std::string> equality_strings;
+        for (const auto& [x, y] : this->equalities) {
+            equality_strings.push_back(absl::StrFormat("(%s == %s)",
+                                                       x.ToCpp(),
+                                                       y.ToCpp()));
+        }
+        std::string body_string;
+        for (const auto& action : this->body) {
+            absl::StrAppend(
+                &body_string, Indent(action->ToCpp(source), 1), "\n");
+        }
+        return absl::StrFormat("if (%s) {\n%s}",
+                               absl::StrJoin(equality_strings, " || "),
+                               body_string);
+    }
+};
+
 struct ActionAssignConstant : public Action {
     VarName variable;
     std::string constant;
@@ -688,7 +715,7 @@ struct ActionIterateOverHashSet : public Action {
             absl::StrAppend(
                 &body_string, Indent(action->ToCpp(source), 1), "\n");
         }
-        return absl::StrFormat("for (const auto& %s : %s) {%s}",
+        return absl::StrFormat("for (const auto& %s : %s) {\n%s}",
                                value.ToCpp(),
                                hash_set.ToCpp(),
                                body_string);
@@ -762,7 +789,7 @@ struct ActionIterateOverHashMap : public Action {
         for (const auto& action : this->body(key, value)) {
             absl::StrAppend(&body_string, action->ToCpp(source), "\n");
         }
-        return absl::StrFormat("for (const auto& [%s, %s] : %s) { %s }",
+        return absl::StrFormat("for (const auto& [%s, %s] : %s) {\n%s}",
                                key.ToCpp(),
                                value.ToCpp(),
                                hash_map.ToCpp(),
