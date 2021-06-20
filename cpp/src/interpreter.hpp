@@ -129,9 +129,6 @@ private:
 absl::Status Interpreter::Interpret(Relation* input) {
     if (auto r = DynamicCast<Relation, RelationReference>(input)) {
         context.insert_or_assign(input, variables.at(r.value()->name));
-    } else if (auto r = DynamicCast<Relation, RelationNot>(input)) {
-        RETURN_IF_ERROR(Interpret(r.value()->rel));
-        return absl::InternalError("Interpreter cannot support Not");
     } else if (auto r = DynamicCast<Relation, RelationJoin>(input)) {
         RETURN_IF_ERROR(Interpret(r.value()->lhs));
         RETURN_IF_ERROR(Interpret(r.value()->rhs));

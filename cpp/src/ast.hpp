@@ -230,18 +230,6 @@ struct RelationReference : public Relation {
     }
 };
 
-struct RelationNot : public Relation {
-    Relation* rel;
-
-    explicit RelationNot(Relation* rel_) : rel(rel_) {}
-
-    std::string ToString() const override {
-        return absl::StrFormat("Not(%s)", rel->ToString());
-    }
-
-    int32_t Arity() const override { return rel->Arity(); }
-};
-
 using JoinOn = absl::btree_set<std::pair<Attr, Attr>>;
 
 struct RelationJoin : public Relation {
