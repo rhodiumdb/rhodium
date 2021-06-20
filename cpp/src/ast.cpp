@@ -31,9 +31,9 @@ std::string Method::ToCpp(FreshVariableSource* source) const {
     std::vector<std::string> args_vec;
     for (int32_t i = 0; i < this->arguments.size(); i++) {
         args_vec.push_back(absl::StrCat(
-                               this->arguments[i].first.ToCpp(),
+                               this->arguments[i].second->ToCpp(),
                                " ",
-                               this->arguments[i].second->ToCpp()));
+                               this->arguments[i].first.ToCpp()));
     }
 
     auto args = absl::StrJoin(args_vec, ", ");

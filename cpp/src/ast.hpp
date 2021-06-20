@@ -438,6 +438,8 @@ struct Type {
 };
 
 struct TypeInt : public Type {
+    TypeInt() {}
+
     std::string ToCpp() const override {
         return "int32_t";
     }
@@ -446,6 +448,8 @@ struct TypeInt : public Type {
 struct TypeBasic : public Type {
     TypeName name;
 
+    TypeBasic(TypeName name_) : name(name_) {}
+
     std::string ToCpp() const override {
         return this->name.ToCpp();
     }
@@ -453,6 +457,9 @@ struct TypeBasic : public Type {
 
 struct TypeRow : public Type {
     std::vector<Type*> elements;
+
+    TypeRow(absl::Span<Type* const> elements_)
+        : elements(elements_.begin(), elements_.end()) {}
 
     std::string ToCpp() const override {
         std::stringstream ss;
@@ -469,6 +476,8 @@ struct TypeRow : public Type {
 struct TypeHashSet : public Type {
     Type* element;
 
+    TypeHashSet(Type* element_) : element(element_) {}
+
     std::string ToCpp() const override {
         return absl::StrCat("absl::flat_hash_set<",
                             this->element->ToCpp(), ">");
@@ -478,6 +487,8 @@ struct TypeHashSet : public Type {
 struct TypeHashMap : public Type {
     Type* key;
     Type* value;
+
+    TypeHashMap(Type* key_, Type* value_) : key(key_), value(value_) {}
 
     std::string ToCpp() const override {
         return absl::StrCat("absl::flat_hash_map<",
@@ -490,6 +501,8 @@ struct TypeTrie : public Type {
     Type* key;
     Type* value;
 
+    TypeTrie(Type* key_, Type* value_) : key(key_), value(value_) {}
+
     std::string ToCpp() const override {
         return absl::StrCat("trie<",
                             this->key->ToCpp(), ", ",
@@ -499,6 +512,8 @@ struct TypeTrie : public Type {
 
 struct TypeVector : public Type {
     Type* element;
+
+    TypeVector(Type* element_) : element(element_) {}
 
     std::string ToCpp() const override {
         return absl::StrCat("std::vector<", this->element->ToCpp(), ">");

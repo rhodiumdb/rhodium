@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "ast.hpp"
+#include "codegen.hpp"
 #include "ghd.hpp"
 #include "interpreter.hpp"
 #include "macros.hpp"
@@ -243,6 +244,34 @@ absl::Status TestInterpreter() {
     return absl::OkStatus();
 }
 
+absl::Status TestCodegen() {
+    Codegen codegen;
+
+    DataStructure ds("example");
+    FreshVariableSource source;
+
+    RelationFactory fac;
+    auto r = fac.Make<RelationReference>("R", 2);
+    auto s = fac.Make<RelationReference>("S", 2);
+
+    JoinOn join_on;
+    join_on.insert({1, 0});
+    auto semijoin = fac.Make<RelationSemijoin>(r, s, join_on);
+
+    absl::btree_map<Relation*, Type*> typing_context;
+
+    typing_context[r] = new TypeRow({ new TypeInt, new TypeInt });
+    typing_context[s] = new TypeRow({ new TypeInt, new TypeInt });
+    typing_context[semijoin] =
+        new TypeRow({ new TypeInt, new TypeInt, new TypeInt });
+
+    RETURN_IF_ERROR(codegen.Run(&ds, semijoin, &source, typing_context));
+
+    std::cerr << "DEBUG: codegen: " << ds.ToCpp(&source) << "\n";
+
+    return absl::OkStatus();
+}
+
 absl::Status RealMain() {
     rdss::DataStructure example("Example");
     // example.members.push_back(
@@ -262,6 +291,7 @@ absl::Status RealMain() {
     TestGHD();
     RETURN_IF_ERROR(TestYannakakis());
     RETURN_IF_ERROR(TestInterpreter());
+    RETURN_IF_ERROR(TestCodegen());
 
     return absl::OkStatus();
 }
