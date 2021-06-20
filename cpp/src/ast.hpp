@@ -407,7 +407,7 @@ struct RelationView : public Relation {
 struct TypeParameter {
     std::string name;
 
-    TypeParameter(absl::string_view name_) : name(name_.begin(), name_.end()) {}
+    TypeParameter(absl::string_view name_) : name(name_) {}
 
     std::string ToCpp() const { return this->name; }
 };
@@ -415,7 +415,7 @@ struct TypeParameter {
 struct VarName {
     std::string name;
 
-    VarName(absl::string_view name_) : name(name_.begin(), name_.end()) {}
+    VarName(absl::string_view name_) : name(name_) {}
 
     std::string ToCpp() const { return this->name; }
 };
@@ -423,7 +423,7 @@ struct VarName {
 struct TypeName {
     std::string name;
 
-    TypeName(absl::string_view name_) : name(name_.begin(), name_.end()) {}
+    TypeName(absl::string_view name_) : name(name_) {}
 
     std::string ToCpp() const { return this->name; }
 };
@@ -529,6 +529,10 @@ struct ActionGetMember : public Action {
     VarName pointer;
     VarName struct_field;
 
+    ActionGetMember(VarName variable_, VarName pointer_, VarName struct_field_)
+        : variable(variable_), pointer(pointer_), struct_field(struct_field_)
+        {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s = %s.%s;",
                                variable.ToCpp(),
@@ -541,6 +545,9 @@ struct ActionAssignConstant : public Action {
     VarName variable;
     std::string constant;
 
+    ActionAssignConstant(VarName variable_, absl::string_view constant_)
+        : variable(variable_), constant(constant_) {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s = %s;", variable.ToCpp(), constant);
     }
@@ -549,6 +556,13 @@ struct ActionAssignConstant : public Action {
 struct ActionCreateRow : public Action {
     VarName variable;
     std::vector<std::pair<VarName, Type*>> elements;
+
+    explicit ActionCreateRow(VarName variable_)
+        : variable(variable_), elements() {}
+
+    ActionCreateRow(VarName variable_,
+                    absl::Span<const std::pair<VarName, Type*>> elements_)
+        : variable(variable_), elements(elements_.begin(), elements_.end()) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
         std::vector<std::string> element_strings;
@@ -569,6 +583,9 @@ struct ActionIndexRow : public Action {
     VarName row_to_index;
     uint32_t index;
 
+    ActionIndexRow(VarName variable_, VarName row_to_index_, uint32_t index_)
+        : variable(variable_), row_to_index(row_to_index_), index(index_) {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("auto %s = std::get<%d>(%s);",
                                variable.ToCpp(),
@@ -580,6 +597,9 @@ struct ActionIndexRow : public Action {
 struct ActionInvoke : public Action {
     VarName method;
     std::vector<VarName> arguments;
+
+    ActionInvoke(VarName method_, absl::Span<const VarName> arguments_)
+        : method(method_), arguments(arguments_.begin(), arguments_.end()) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
         std::vector<std::string> argument_strings;
@@ -596,6 +616,9 @@ struct ActionCreateHashSet : public Action {
     VarName variable;
     Type* type;
 
+    ActionCreateHashSet(VarName variable_, Type* type_)
+        : variable(variable_), type(type_) {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("absl::flat_hash_set<%s> %s;",
                                type->ToCpp(),
@@ -606,6 +629,9 @@ struct ActionCreateHashSet : public Action {
 struct ActionInsertHashSet : public Action {
     VarName hash_set;
     VarName value_to_insert;
+
+    ActionInsertHashSet(VarName hash_set_, VarName value_to_insert_)
+        : hash_set(hash_set_), value_to_insert(value_to_insert_) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s.insert(%s);",
@@ -618,6 +644,9 @@ struct ActionDeleteHashSet : public Action {
     VarName hash_set;
     VarName value_to_delete;
 
+    ActionDeleteHashSet(VarName hash_set_, VarName value_to_delete_)
+        : hash_set(hash_set_), value_to_delete(value_to_delete_) {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s.erase(%s);",
                                hash_set.ToCpp(),
@@ -628,6 +657,10 @@ struct ActionDeleteHashSet : public Action {
 struct ActionIterateOverHashSet : public Action {
     VarName hash_set;
     std::function<std::vector<Action*>(VarName)> body;
+
+    ActionIterateOverHashSet(VarName hash_set_,
+                             std::function<std::vector<Action*>(VarName)> body_)
+        : hash_set(hash_set_), body(body_) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
         auto value = source->Fresh();
@@ -647,6 +680,9 @@ struct ActionCreateHashMap : public Action {
     Type* key_type;
     Type* value_type;
 
+    ActionCreateHashMap(VarName variable_, Type* key_type_, Type* value_type_)
+        : variable(variable_), key_type(key_type_), value_type(value_type_) {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("absl::flat_hash_map<%s, %s> %s;",
                                key_type->ToCpp(),
@@ -660,6 +696,13 @@ struct ActionInsertHashMap : public Action {
     VarName key_to_insert;
     VarName value_to_insert;
 
+    ActionInsertHashMap(VarName hash_map_,
+                        VarName key_to_insert_,
+                        VarName value_to_insert_)
+        : hash_map(hash_map_)
+        , key_to_insert(key_to_insert_)
+        , value_to_insert(value_to_insert_) {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s.insert_or_assign(%s, %s);",
                                hash_map.ToCpp(),
@@ -672,6 +715,10 @@ struct ActionDeleteHashMap : public Action {
     VarName hash_map;
     VarName key_to_delete;
 
+    ActionDeleteHashMap(VarName hash_map_,
+                        VarName key_to_delete_)
+        : hash_map(hash_map_), key_to_delete(key_to_delete_) {}
+
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s.erase(%s);",
                                hash_map.ToCpp(),
@@ -682,6 +729,11 @@ struct ActionDeleteHashMap : public Action {
 struct ActionIterateOverHashMap : public Action {
     VarName hash_map;
     std::function<std::vector<Action*>(VarName, VarName)> body;
+
+    ActionIterateOverHashMap(
+        VarName hash_map_,
+        std::function<std::vector<Action*>(VarName, VarName)> body_)
+        : hash_map(hash_map_), body(body_) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
         auto key = source->Fresh();
@@ -700,10 +752,17 @@ struct ActionIterateOverHashMap : public Action {
 
 struct ActionCreateTrie : public Action {
     VarName variable;
+    Type* key_type;
+    Type* value_type;
+
+    ActionCreateTrie(VarName variable_, Type* key_type_, Type* value_type_)
+        : variable(variable_), key_type(key_type_), value_type(value_type_) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
-        return absl::StrFormat("Trie<auto> %s;",
-                               this->variable.ToCpp());
+        return absl::StrFormat("Trie<%s, %s> %s;",
+                               key_type->ToCpp(),
+                               value_type->ToCpp(),
+                               variable.ToCpp());
     }
 };
 
@@ -711,6 +770,13 @@ struct ActionInsertTrie : public Action {
     VarName trie;
     VarName key_to_insert;
     VarName value_to_insert;
+
+    ActionInsertTrie(VarName trie_,
+                     VarName key_to_insert_,
+                     VarName value_to_insert_)
+        : trie(trie_)
+        , key_to_insert(key_to_insert_)
+        , value_to_insert(value_to_insert_) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s.Insert(%s, %s);",
@@ -723,6 +789,10 @@ struct ActionInsertTrie : public Action {
 struct ActionDeleteTrie : public Action {
     VarName trie;
     VarName key_to_delete;
+
+    ActionDeleteTrie(VarName trie_,
+                     VarName key_to_delete_)
+        : trie(trie_), key_to_delete(key_to_delete_) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
         return absl::StrFormat("%s.Delete(%s)",
