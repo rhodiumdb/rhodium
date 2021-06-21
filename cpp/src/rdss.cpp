@@ -245,10 +245,6 @@ absl::Status TestInterpreter() {
 }
 
 absl::Status TestCodegen() {
-    Codegen codegen("example");
-
-    FreshVariableSource source;
-
     RelationFactory fac;
     auto r = fac.Make<RelationReference>("R", 2);
     auto s = fac.Make<RelationReference>("S", 1);
@@ -259,14 +255,18 @@ absl::Status TestCodegen() {
 
     auto rel_union = fac.Make<RelationUnion>(r, semijoin);
 
-    absl::btree_map<Relation*, Type*> typing_context;
+    TypingContext typing_context;
 
     typing_context[r] = new TypeRow({ new TypeInt, new TypeInt });
     typing_context[s] = new TypeRow({ new TypeInt });
     typing_context[semijoin] = new TypeRow({ new TypeInt, new TypeInt });
     typing_context[rel_union] = new TypeRow({ new TypeInt, new TypeInt });
 
-    RETURN_IF_ERROR(codegen.Run(rel_union, &source, typing_context));
+    FreshVariableSource source;
+
+    Codegen codegen("example", &source, typing_context);
+
+    RETURN_IF_ERROR(codegen.Run(rel_union));
 
     std::cerr << "DEBUG: codegen: " << codegen.ds.ToCpp(&source) << "\n";
 

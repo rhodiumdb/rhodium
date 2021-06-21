@@ -58,12 +58,20 @@ std::vector<Attr> RHSIndices(const JoinOn& join_on) {
 using TypingContext = absl::btree_map<Relation*, Type*>;
 
 struct Codegen {
-    Codegen(absl::string_view name)
-        : table_relations(), view_relations(), ds(std::string(name)) {}
+    Codegen(absl::string_view name,
+            FreshVariableSource* source_,
+            const TypingContext& typing_context_)
+        : table_relations()
+        , view_relations()
+        , ds(std::string(name))
+        , source(source_)
+        , typing_context(typing_context_) {}
 
     absl::btree_map<std::string, RelationCode> table_relations;
     absl::btree_map<Relation*, RelationCode> view_relations;
     DataStructure ds;
+    FreshVariableSource* source;
+    TypingContext typing_context;
 
     Member* MemberOfTable(absl::string_view name) {
         return &ds.members.at(table_relations.at(name).member);
@@ -128,8 +136,7 @@ struct Codegen {
     std::pair<std::vector<Action*>, Type*>
     FilterTuple(VarName output,
                 std::pair<VarName, Type*> tuple,
-                absl::Span<int32_t const> element_indices,
-                FreshVariableSource* source) {
+                absl::Span<int32_t const> element_indices) {
         std::vector<Action*> result;
         std::vector<Type*> type_vector;
         std::vector<std::pair<VarName, Type*>> restricted_elements;
@@ -146,9 +153,7 @@ struct Codegen {
         return {result, new TypeRow(type_vector)};
     }
 
-    absl::Status Run(Relation* rel,
-                     FreshVariableSource* source,
-                     const TypingContext& typing_context) {
+    absl::Status Run(Relation* rel) {
         if (view_relations.contains(rel)) {
             return absl::OkStatus();
         }
@@ -178,27 +183,20 @@ struct Codegen {
             auto rhs = r.value()->rhs;
             auto join_on = r.value()->attributes;
 
-            RETURN_IF_ERROR(this->Run(lhs, source, typing_context));
-            RETURN_IF_ERROR(this->Run(rhs, source, typing_context));
-
-            auto lhs_member = ds.members.at(view_relations.at(lhs).member);
-            auto rhs_member = ds.members.at(view_relations.at(rhs).member);
+            RETURN_IF_ERROR(this->Run(lhs));
+            RETURN_IF_ERROR(this->Run(rhs));
 
             {
-                auto& lhs_insertion_method =
-                    ds.methods.at(view_relations.at(lhs).insertion_method);
-
                 VarName restricted_lhs = source->Fresh();
 
-                lhs_insertion_method.body +=
+                InsertionOfView(lhs)->body +=
                     FilterTuple(restricted_lhs,
                                 {VarName("tuple"), typing_context.at(lhs)},
-                                LHSIndices(join_on),
-                                source).first;
+                                LHSIndices(join_on)).first;
 
-                lhs_insertion_method.body.push_back(
+                InsertionOfView(lhs)->body.push_back(
                     new ActionIterateOverHashSet {
-                        rhs_member.name,
+                        MemberOfView(rhs)->name,
                         [=, this](VarName tuple) -> std::vector<Action*> {
                             std::vector<Action*> result;
 
@@ -207,15 +205,14 @@ struct Codegen {
                             result +=
                                 FilterTuple(restricted_rhs,
                                             {tuple, typing_context.at(rhs)},
-                                            RHSIndices(join_on),
-                                            source).first;
+                                            RHSIndices(join_on)).first;
 
                             result.push_back(
                                 new ActionIfEquals(
                                     {{restricted_lhs, restricted_rhs}},
                                     {
                                         new ActionInvoke(
-                                            ds.methods.at(view_relations.at(rel).insertion_method).name,
+                                            InsertionOfView(rel)->name,
                                             {VarName("tuple")})
                                     }));
                             return result;
@@ -224,20 +221,16 @@ struct Codegen {
             }
 
             {
-                auto& rhs_insertion_method =
-                    ds.methods.at(view_relations.at(rhs).insertion_method);
-
                 VarName restricted_rhs = source->Fresh();
 
-                rhs_insertion_method.body +=
+                InsertionOfView(rhs)->body +=
                     FilterTuple(restricted_rhs,
                                 {VarName("tuple"), typing_context.at(rhs)},
-                                RHSIndices(join_on),
-                                source).first;
+                                RHSIndices(join_on)).first;
 
-                rhs_insertion_method.body.push_back(
+                InsertionOfView(rhs)->body.push_back(
                     new ActionIterateOverHashSet {
-                        lhs_member.name,
+                        MemberOfView(lhs)->name,
                         [=, this](VarName tuple) -> std::vector<Action*> {
                             std::vector<Action*> result;
 
@@ -246,15 +239,14 @@ struct Codegen {
                             result +=
                                 FilterTuple(restricted_lhs,
                                             {tuple, typing_context.at(lhs)},
-                                            LHSIndices(join_on),
-                                            source).first;
+                                            LHSIndices(join_on)).first;
 
                             result.push_back(
                                 new ActionIfEquals(
                                     {{restricted_lhs, restricted_rhs}},
                                     {
                                         new ActionInvoke(
-                                            ds.methods.at(view_relations.at(rel).insertion_method).name,
+                                            InsertionOfView(rel)->name,
                                             {tuple})
                                     }));
                             return result;
@@ -264,39 +256,23 @@ struct Codegen {
 
             // FIXME: implement deletion for semijoins
         } else if (auto r = DynamicCast<Relation, RelationUnion>(rel)) {
-            VarName rel_name = source->Fresh();
-            Type* rel_type = typing_context.at(rel);
-
-            view_relations[rel] = SimpleRelationCode(rel_name.name, rel_type);
+            view_relations[rel] =
+                SimpleRelationCode(source->Fresh().name,
+                                   typing_context.at(rel));
 
             auto lhs = r.value()->lhs;
             auto rhs = r.value()->rhs;
 
-            RETURN_IF_ERROR(this->Run(lhs, source, typing_context));
-            RETURN_IF_ERROR(this->Run(rhs, source, typing_context));
+            RETURN_IF_ERROR(this->Run(lhs));
+            RETURN_IF_ERROR(this->Run(rhs));
 
-            auto lhs_member = ds.members.at(view_relations.at(lhs).member);
-            auto rhs_member = ds.members.at(view_relations.at(rhs).member);
+            InsertionOfView(lhs)->body.push_back(
+                new ActionInvoke(InsertionOfView(rel)->name,
+                                 {VarName("tuple")}));
 
-            {
-                auto& lhs_insertion_method =
-                    ds.methods.at(view_relations.at(lhs).insertion_method);
-
-                lhs_insertion_method.body.push_back(
-                    new ActionInvoke(
-                        ds.methods.at(view_relations.at(rel).insertion_method).name,
-                        {VarName("tuple")}));
-            }
-
-            {
-                auto& rhs_insertion_method =
-                    ds.methods.at(view_relations.at(rhs).insertion_method);
-
-                rhs_insertion_method.body.push_back(
-                    new ActionInvoke(
-                        ds.methods.at(view_relations.at(rel).insertion_method).name,
-                        {VarName("tuple")}));
-            }
+            InsertionOfView(rhs)->body.push_back(
+                new ActionInvoke(InsertionOfView(rel)->name,
+                                 {VarName("tuple")}));
 
             // FIXME: implement deletions
         } else if (auto r = DynamicCast<Relation, RelationDifference>(rel)) {
