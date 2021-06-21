@@ -314,7 +314,38 @@ struct Codegen {
         } else if (auto r = DynamicCast<Relation, RelationMap>(rel)) {
             // FIXME: implement this case
         } else if (auto r = DynamicCast<Relation, RelationView>(rel)) {
-            // FIXME: implement this case
+            view_relations[rel] =
+                SimpleRelationCode(source->Fresh().name,
+                                   typing_context.at(rel));
+
+            auto perm = r.value()->rel.perm;
+            auto underlying = r.value()->rel.rel;
+
+            RETURN_IF_ERROR(this->Run(underlying));
+
+            std::vector<std::pair<VarName, Type*>> viewed_elements;
+            viewed_elements.resize(r.value()->rel.Arity(),
+                                   {VarName(""), nullptr});
+            int32_t i = 0;
+            for (std::optional<Attr> attr_maybe : perm) {
+                if (attr_maybe.has_value()) {
+                    VarName elem = source->Fresh();
+                    InsertionOfView(underlying)->body.push_back(
+                        new ActionIndexRow(elem, VarName("tuple"), i));
+                    Type* type =
+                        DynamicCast<Type, TypeRow>(typing_context.at(underlying))
+                        .value()->elements.at(i);
+                    viewed_elements.at(attr_maybe.value()) = {elem, type};
+                }
+                i++;
+            }
+            VarName output = source->Fresh();
+            InsertionOfView(underlying)->body += {
+                new ActionCreateRow(output, viewed_elements),
+                new ActionInvoke(InsertionOfView(rel)->name, {output})
+            };
+
+            // FIXME: implement deletions for views
         } else {
             return absl::InternalError(
                 "If this is reached, a new relation op has been added but no "

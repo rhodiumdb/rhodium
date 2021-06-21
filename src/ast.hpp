@@ -51,6 +51,9 @@ struct Viewed {
         }
     }
 
+    Viewed(const AttrPartialPermutation& perm_, const T& rel_)
+        : rel(rel_), perm(perm_) {}
+
     std::string ToString() const {
         std::vector<std::string> strings;
         for (const auto& attr_maybe : perm) {
