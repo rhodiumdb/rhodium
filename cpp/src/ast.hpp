@@ -484,6 +484,17 @@ struct TypeHashSet : public Type {
     }
 };
 
+struct TypeBag : public Type {
+    Type* element;
+
+    TypeBag(Type* element_) : element(element_) {}
+
+    std::string ToCpp() const override {
+        return absl::StrCat("absl::flat_hash_map<",
+                            this->element->ToCpp(), ", int32_t>");
+    }
+};
+
 struct TypeHashMap : public Type {
     Type* key;
     Type* value;
@@ -861,6 +872,97 @@ struct ActionDeleteTrie : public Action {
         return absl::StrFormat("%s.Delete(%s)",
                                this->trie.ToCpp(),
                                this->key_to_delete.ToCpp());
+    }
+};
+
+struct ActionCreateBag : public Action {
+    VarName variable;
+    Type* value_type;
+
+    ActionCreateBag(VarName variable_, Type* value_type_)
+        : variable(variable_), value_type(value_type_) {}
+
+    std::string ToCpp(FreshVariableSource* source) const override {
+        return absl::StrFormat("absl::flat_hash_map<%s, int32_t> %s;",
+                               value_type->ToCpp(),
+                               variable.ToCpp());
+    }
+};
+
+struct ActionIncrementBag : public Action {
+    VarName bag;
+    VarName value_to_insert;
+
+    ActionIncrementBag(VarName bag_, VarName value_to_insert_)
+        : bag(bag_)
+        , value_to_insert(value_to_insert_) {}
+
+    std::string ToCpp(FreshVariableSource* source) const override {
+        auto bag_cpp = this->bag.ToCpp();
+        auto value_cpp = this->value_to_insert.ToCpp();
+        return absl::StrFormat(
+            "if (%s.contains(%s)) { %s[%s]++; } else { %s[%s] = 1; }",
+            bag_cpp, value_cpp, bag_cpp, value_cpp, bag_cpp, value_cpp);
+    }
+};
+
+struct ActionDecrementBag : public Action {
+    VarName bag;
+    VarName value_to_delete;
+
+    ActionDecrementBag(VarName bag_, VarName value_to_delete_)
+        : bag(bag_), value_to_delete(value_to_delete_) {}
+
+    std::string ToCpp(FreshVariableSource* source) const override {
+        auto bag_cpp = this->bag.ToCpp();
+        auto value_cpp = this->value_to_delete.ToCpp();
+
+        return absl::StrFormat(
+            "if (%s.contains(%s)) { %s[%s]--; if (%s[%s] < 0) %s.erase(%s); }",
+            bag_cpp, value_cpp,
+            bag_cpp, value_cpp,
+            bag_cpp, value_cpp,
+            bag_cpp, value_cpp);
+    }
+};
+
+struct ActionIterateOverBag : public Action {
+    VarName bag;
+    std::function<std::vector<Action*>(VarName)> body;
+
+    ActionIterateOverBag(VarName bag_,
+                         std::function<std::vector<Action*>(VarName)> body_)
+        : bag(bag_), body(body_) {}
+
+    std::string ToCpp(FreshVariableSource* source) const override {
+        auto value = source->Fresh();
+        std::string body_string;
+        for (const auto& action : this->body(value)) {
+            absl::StrAppend(
+                &body_string, Indent(action->ToCpp(source), 1), "\n");
+        }
+        return absl::StrFormat("for (const auto& [%s, %s] : %s) {\n%s}",
+                               value.ToCpp(),
+                               // multiplicities should be invisible
+                               source->Fresh().name,
+                               bag.ToCpp(),
+                               body_string);
+    }
+};
+
+struct ActionContainsBag : public Action {
+    VarName variable;
+    VarName bag;
+    VarName value;
+
+    ActionContainsBag(VarName variable_, VarName bag_, VarName value_)
+        : variable(variable_), bag(bag_), value(value_) {}
+
+    std::string ToCpp(FreshVariableSource* source) const override {
+        return absl::StrFormat("bool %s = %s.contains(%s);",
+                               variable.ToCpp(),
+                               bag.ToCpp(),
+                               value.ToCpp());
     }
 };
 
