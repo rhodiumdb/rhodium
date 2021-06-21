@@ -595,7 +595,7 @@ struct ActionAssignConstant : public Action {
         : variable(variable_), constant(constant_) {}
 
     std::string ToCpp(FreshVariableSource* source) const override {
-        return absl::StrFormat("%s = %s;", variable.ToCpp(), constant);
+        return absl::StrFormat("auto %s = %s;", variable.ToCpp(), constant);
     }
 };
 
@@ -719,6 +719,22 @@ struct ActionIterateOverHashSet : public Action {
                                value.ToCpp(),
                                hash_set.ToCpp(),
                                body_string);
+    }
+};
+
+struct ActionContainsHashSet : public Action {
+    VarName variable;
+    VarName hash_set;
+    VarName value;
+
+    ActionContainsHashSet(VarName variable_, VarName hash_set_, VarName value_)
+        : variable(variable_), hash_set(hash_set_), value(value_) {}
+
+    std::string ToCpp(FreshVariableSource* source) const override {
+        return absl::StrFormat("bool %s = %s.contains(%s);",
+                               variable.ToCpp(),
+                               hash_set.ToCpp(),
+                               value.ToCpp());
     }
 };
 

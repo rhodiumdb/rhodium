@@ -276,7 +276,39 @@ struct Codegen {
 
             // FIXME: implement deletions
         } else if (auto r = DynamicCast<Relation, RelationDifference>(rel)) {
-            // FIXME: implement this case
+            view_relations[rel] =
+                SimpleRelationCode(source->Fresh().name,
+                                   typing_context.at(rel));
+
+            auto lhs = r.value()->lhs;
+            auto rhs = r.value()->rhs;
+
+            RETURN_IF_ERROR(this->Run(lhs));
+            RETURN_IF_ERROR(this->Run(rhs));
+
+            InsertionOfView(lhs)->body.push_back(
+                new ActionInvoke(InsertionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            InsertionOfView(rhs)->body.push_back(
+                new ActionInvoke(DeletionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            DeletionOfView(lhs)->body.push_back(
+                new ActionInvoke(DeletionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            auto contains_var = source->Fresh();
+            auto true_var = source->Fresh();
+            DeletionOfView(rhs)->body += {
+                new ActionContainsHashSet(contains_var,
+                                          MemberOfView(lhs)->name,
+                                          {VarName("tuple")}),
+                new ActionAssignConstant(true_var, "true"),
+                new ActionIfEquals({{contains_var, true_var}},
+                                   {new ActionInvoke(InsertionOfView(rel)->name,
+                                                     {VarName("tuple")})})
+            };
         } else if (auto r = DynamicCast<Relation, RelationSelect>(rel)) {
             // FIXME: implement this case
         } else if (auto r = DynamicCast<Relation, RelationMap>(rel)) {

@@ -255,18 +255,21 @@ absl::Status TestCodegen() {
 
     auto rel_union = fac.Make<RelationUnion>(r, semijoin);
 
+    auto difference = fac.Make<RelationDifference>(rel_union, semijoin);
+
     TypingContext typing_context;
 
     typing_context[r] = new TypeRow({ new TypeInt, new TypeInt });
     typing_context[s] = new TypeRow({ new TypeInt });
     typing_context[semijoin] = new TypeRow({ new TypeInt, new TypeInt });
     typing_context[rel_union] = new TypeRow({ new TypeInt, new TypeInt });
+    typing_context[difference] = new TypeRow({ new TypeInt, new TypeInt });
 
     FreshVariableSource source;
 
     Codegen codegen("example", &source, typing_context);
 
-    RETURN_IF_ERROR(codegen.Run(rel_union));
+    RETURN_IF_ERROR(codegen.Run(difference));
 
     std::cerr << "DEBUG: codegen: " << codegen.ds.ToCpp(&source) << "\n";
 
