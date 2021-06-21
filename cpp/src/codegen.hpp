@@ -261,8 +261,44 @@ struct Codegen {
                         }
                     });
             }
+
+            // FIXME: implement deletion for semijoins
         } else if (auto r = DynamicCast<Relation, RelationUnion>(rel)) {
-            // FIXME: implement this case
+            VarName rel_name = source->Fresh();
+            Type* rel_type = typing_context.at(rel);
+
+            view_relations[rel] = SimpleRelationCode(rel_name.name, rel_type);
+
+            auto lhs = r.value()->lhs;
+            auto rhs = r.value()->rhs;
+
+            RETURN_IF_ERROR(this->Run(lhs, source, typing_context));
+            RETURN_IF_ERROR(this->Run(rhs, source, typing_context));
+
+            auto lhs_member = ds.members.at(view_relations.at(lhs).member);
+            auto rhs_member = ds.members.at(view_relations.at(rhs).member);
+
+            {
+                auto& lhs_insertion_method =
+                    ds.methods.at(view_relations.at(lhs).insertion_method);
+
+                lhs_insertion_method.body.push_back(
+                    new ActionInvoke(
+                        ds.methods.at(view_relations.at(rel).insertion_method).name,
+                        {VarName("tuple")}));
+            }
+
+            {
+                auto& rhs_insertion_method =
+                    ds.methods.at(view_relations.at(rhs).insertion_method);
+
+                rhs_insertion_method.body.push_back(
+                    new ActionInvoke(
+                        ds.methods.at(view_relations.at(rel).insertion_method).name,
+                        {VarName("tuple")}));
+            }
+
+            // FIXME: implement deletions
         } else if (auto r = DynamicCast<Relation, RelationDifference>(rel)) {
             // FIXME: implement this case
         } else if (auto r = DynamicCast<Relation, RelationSelect>(rel)) {

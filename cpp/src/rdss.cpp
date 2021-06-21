@@ -257,13 +257,16 @@ absl::Status TestCodegen() {
     join_on.insert({1, 0});
     auto semijoin = fac.Make<RelationSemijoin>(r, s, join_on);
 
+    auto rel_union = fac.Make<RelationUnion>(r, semijoin);
+
     absl::btree_map<Relation*, Type*> typing_context;
 
     typing_context[r] = new TypeRow({ new TypeInt, new TypeInt });
     typing_context[s] = new TypeRow({ new TypeInt });
     typing_context[semijoin] = new TypeRow({ new TypeInt, new TypeInt });
+    typing_context[rel_union] = new TypeRow({ new TypeInt, new TypeInt });
 
-    RETURN_IF_ERROR(codegen.Run(semijoin, &source, typing_context));
+    RETURN_IF_ERROR(codegen.Run(rel_union, &source, typing_context));
 
     std::cerr << "DEBUG: codegen: " << codegen.ds.ToCpp(&source) << "\n";
 
