@@ -31,19 +31,19 @@
 // `NDEBUG` is defined, so `RDSS_DCHECK_EQ(x, y)` and so on do nothing. However,
 // we still want the compiler to parse `x` and `y`, because we don't want to
 // lose potentially useful errors and warnings.
-#define RDSS_LOGGING_INTERNAL_DCHECK_NOP(x, y) \
-  while (false && ((void)(x), (void)(y), 0))  \
+#define RDSS_LOGGING_INTERNAL_DCHECK_NOP(x, y)                                 \
+  while (false && ((void)(x), (void)(y), 0))                                   \
   ::rdss::logging_internal::NullStream().stream()
 #endif
 
-#define RDSS_LOGGING_INTERNAL_CHECK(failure_message) \
+#define RDSS_LOGGING_INTERNAL_CHECK(failure_message)                           \
   ::rdss::logging_internal::LogMessageFatal(__FILE__, __LINE__, failure_message)
-#define RDSS_LOGGING_INTERNAL_QCHECK(failure_message)                  \
-  ::rdss::logging_internal::LogMessageQuietlyFatal(__FILE__, __LINE__, \
+#define RDSS_LOGGING_INTERNAL_QCHECK(failure_message)                          \
+  ::rdss::logging_internal::LogMessageQuietlyFatal(__FILE__, __LINE__,         \
                                                    failure_message)
 
 #define RDSS_LOGGING_INTERNAL_CHECK_OP(name, op, val1, val2)                   \
-  while (std::string* rdss_logging_internal_check_op_result                    \
+  while (std::string *rdss_logging_internal_check_op_result                    \
              ABSL_ATTRIBUTE_UNUSED = ::rdss::logging_internal::name##Impl(     \
                  ::rdss::logging_internal::GetReferenceableValue(val1),        \
                  ::rdss::logging_internal::GetReferenceableValue(val2),        \
@@ -51,7 +51,7 @@
                                                                   " " #val2))) \
   RDSS_LOGGING_INTERNAL_CHECK(*rdss_logging_internal_check_op_result).stream()
 #define RDSS_LOGGING_INTERNAL_QCHECK_OP(name, op, val1, val2)                  \
-  while (std::string* rdss_logging_internal_qcheck_op_result =                 \
+  while (std::string *rdss_logging_internal_qcheck_op_result =                 \
              ::rdss::logging_internal::name##Impl(                             \
                  ::rdss::logging_internal::GetReferenceableValue(val1),        \
                  ::rdss::logging_internal::GetReferenceableValue(val2),        \
@@ -89,20 +89,20 @@ namespace detect_specialization {
 // their 64-bit variant. This does not change the printed value, but reduces the
 // number of instantiations even further. Promoting an integer is very cheap at
 // the call site.
-int64_t operator<<(std::ostream&, short value);           // NOLINT
-int64_t operator<<(std::ostream&, unsigned short value);  // NOLINT
-int64_t operator<<(std::ostream&, int value);
-int64_t operator<<(std::ostream&, unsigned int value);
-int64_t operator<<(std::ostream&, long value);                 // NOLINT
-uint64_t operator<<(std::ostream&, unsigned long value);       // NOLINT
-int64_t operator<<(std::ostream&, long long value);            // NOLINT
-uint64_t operator<<(std::ostream&, unsigned long long value);  // NOLINT
-float operator<<(std::ostream&, float value);
-double operator<<(std::ostream&, double value);
-long double operator<<(std::ostream&, long double value);
-bool operator<<(std::ostream&, bool value);
-const void* operator<<(std::ostream&, const void* value);
-const void* operator<<(std::ostream&, std::nullptr_t);
+int64_t operator<<(std::ostream &, short value);          // NOLINT
+int64_t operator<<(std::ostream &, unsigned short value); // NOLINT
+int64_t operator<<(std::ostream &, int value);
+int64_t operator<<(std::ostream &, unsigned int value);
+int64_t operator<<(std::ostream &, long value);                // NOLINT
+uint64_t operator<<(std::ostream &, unsigned long value);      // NOLINT
+int64_t operator<<(std::ostream &, long long value);           // NOLINT
+uint64_t operator<<(std::ostream &, unsigned long long value); // NOLINT
+float operator<<(std::ostream &, float value);
+double operator<<(std::ostream &, double value);
+long double operator<<(std::ostream &, long double value);
+bool operator<<(std::ostream &, bool value);
+const void *operator<<(std::ostream &, const void *value);
+const void *operator<<(std::ostream &, std::nullptr_t);
 
 // These `char` overloads are specified like this in the standard, so we have to
 // write them exactly the same to ensure the call is ambiguous.
@@ -110,37 +110,37 @@ const void* operator<<(std::ostream&, std::nullptr_t);
 // template) then one call might have a higher rank than the other and it would
 // not be ambiguous.
 template <typename Traits>
-char operator<<(std::basic_ostream<char, Traits>&, char);
+char operator<<(std::basic_ostream<char, Traits> &, char);
 template <typename Traits>
-signed char operator<<(std::basic_ostream<char, Traits>&, signed char);
+signed char operator<<(std::basic_ostream<char, Traits> &, signed char);
 template <typename Traits>
-unsigned char operator<<(std::basic_ostream<char, Traits>&, unsigned char);
+unsigned char operator<<(std::basic_ostream<char, Traits> &, unsigned char);
 template <typename Traits>
-const char* operator<<(std::basic_ostream<char, Traits>&, const char*);
+const char *operator<<(std::basic_ostream<char, Traits> &, const char *);
 template <typename Traits>
-const signed char* operator<<(std::basic_ostream<char, Traits>&,
-                              const signed char*);
+const signed char *operator<<(std::basic_ostream<char, Traits> &,
+                              const signed char *);
 template <typename Traits>
-const unsigned char* operator<<(std::basic_ostream<char, Traits>&,
-                                const unsigned char*);
+const unsigned char *operator<<(std::basic_ostream<char, Traits> &,
+                                const unsigned char *);
 
 // This overload triggers when the call is not ambiguous.
 // It means that T is being printed with some overload not on this list.
 // We keep the value as `const T&`.
-template <typename T, typename = decltype(std::declval<std::ostream&>()
-                                          << std::declval<const T&>())>
-const T& Detect(int);
+template <typename T, typename = decltype(std::declval<std::ostream &>()
+                                          << std::declval<const T &>())>
+const T &Detect(int);
 
 // This overload triggers when the call is ambiguous.
 // It means that T is either one from this list or printed as one from this
 // list. Eg an enum that decays to `int` for printing.
 // We ask the overload set to give us the type we want to convert it to.
 template <typename T>
-decltype(detect_specialization::operator<<(std::declval<std::ostream&>(),
-                                           std::declval<const T&>()))
+decltype(detect_specialization::operator<<(std::declval<std::ostream &>(),
+                                           std::declval<const T &>()))
 Detect(char);
 
-}  // namespace detect_specialization
+} // namespace detect_specialization
 
 template <typename T>
 using CheckOpStreamType = decltype(detect_specialization::Detect<T>(0));
@@ -148,34 +148,34 @@ using CheckOpStreamType = decltype(detect_specialization::Detect<T>(0));
 // A helper class for formatting `expr (V1 vs. V2)` in a `CHECK_XX` statement.
 // See `MakeCheckOpString` for sample usage.
 class CheckOpMessageBuilder {
- public:
+public:
   // Inserts `exprtext` and ` (` to the stream.
-  explicit CheckOpMessageBuilder(const char* exprtext);
+  explicit CheckOpMessageBuilder(const char *exprtext);
   // For inserting the first variable.
-  std::ostream* ForVar1() { return stream_.get(); }
+  std::ostream *ForVar1() { return stream_.get(); }
   // For inserting the second variable (adds an intermediate ` vs. `).
-  std::ostream* ForVar2();
+  std::ostream *ForVar2();
   // Get the result (inserts the closing `)`).
-  std::string* NewString();
+  std::string *NewString();
 
- private:
+private:
   std::unique_ptr<std::ostringstream> stream_;
 };
 
 // This formats a value for a failing `CHECK_XX` statement. Ordinarily, it uses
 // the definition for `operator<<`, with a few special cases below.
 template <typename T>
-inline void MakeCheckOpValueString(std::ostream* os, const T& v) {
+inline void MakeCheckOpValueString(std::ostream *os, const T &v) {
   *os << NullGuard<T>::Guard(v);
 }
 
 // Build the error message string. Specify no inlining for code size.
 template <typename T1, typename T2>
-std::string* MakeCheckOpString(T1 v1, T2 v2,
-                               const char* exprtext) ABSL_ATTRIBUTE_NOINLINE;
+std::string *MakeCheckOpString(T1 v1, T2 v2,
+                               const char *exprtext) ABSL_ATTRIBUTE_NOINLINE;
 
 template <typename T1, typename T2>
-std::string* MakeCheckOpString(T1 v1, T2 v2, const char* exprtext) {
+std::string *MakeCheckOpString(T1 v1, T2 v2, const char *exprtext) {
   CheckOpMessageBuilder comb(exprtext);
   MakeCheckOpValueString(comb.ForVar1(), v1);
   MakeCheckOpValueString(comb.ForVar2(), v2);
@@ -186,17 +186,18 @@ std::string* MakeCheckOpString(T1 v1, T2 v2, const char* exprtext) {
 // `(int, int)` override works around the issue that the compiler will not
 // instantiate the template version of the function on values of unnamed enum
 // type.
-#define RDSS_LOGGING_INTERNAL_CHECK_OP_IMPL(name, op)                     \
-  template <typename T1, typename T2>                                     \
-  inline std::string* name##Impl(const T1& v1, const T2& v2,              \
-                                 const char* exprtext) {                  \
-    if (ABSL_PREDICT_TRUE(v1 op v2)) return nullptr;                      \
-    using U1 = CheckOpStreamType<T1>;                                     \
-    using U2 = CheckOpStreamType<T2>;                                     \
-    return MakeCheckOpString<U1, U2>(v1, v2, exprtext);                   \
-  }                                                                       \
-  inline std::string* name##Impl(int v1, int v2, const char* exprtext) {  \
-    return name##Impl<int, int>(v1, v2, exprtext);                        \
+#define RDSS_LOGGING_INTERNAL_CHECK_OP_IMPL(name, op)                          \
+  template <typename T1, typename T2>                                          \
+  inline std::string *name##Impl(const T1 &v1, const T2 &v2,                   \
+                                 const char *exprtext) {                       \
+    if (ABSL_PREDICT_TRUE(v1 op v2))                                           \
+      return nullptr;                                                          \
+    using U1 = CheckOpStreamType<T1>;                                          \
+    using U2 = CheckOpStreamType<T2>;                                          \
+    return MakeCheckOpString<U1, U2>(v1, v2, exprtext);                        \
+  }                                                                            \
+  inline std::string *name##Impl(int v1, int v2, const char *exprtext) {       \
+    return name##Impl<int, int>(v1, v2, exprtext);                             \
   }
 
 RDSS_LOGGING_INTERNAL_CHECK_OP_IMPL(Check_EQ, ==)
@@ -214,30 +215,29 @@ RDSS_LOGGING_INTERNAL_CHECK_OP_IMPL(Check_GT, >)
 //
 // This function avoids that problem for integers (the most common cases) by
 // overloading for every primitive integer type, and returning them by value.
-template <typename T>
-inline const T& GetReferenceableValue(const T& t) {
+template <typename T> inline const T &GetReferenceableValue(const T &t) {
   return t;
 }
 inline char GetReferenceableValue(char t) { return t; }
 inline unsigned char GetReferenceableValue(unsigned char t) { return t; }
 inline signed char GetReferenceableValue(signed char t) { return t; }
-inline short GetReferenceableValue(short t) { return t; }        // NOLINT
-inline unsigned short GetReferenceableValue(unsigned short t) {  // NOLINT
+inline short GetReferenceableValue(short t) { return t; }       // NOLINT
+inline unsigned short GetReferenceableValue(unsigned short t) { // NOLINT
   return t;
 }
 inline int GetReferenceableValue(int t) { return t; }
 inline unsigned int GetReferenceableValue(unsigned int t) { return t; }
-inline long GetReferenceableValue(long t) { return t; }        // NOLINT
-inline unsigned long GetReferenceableValue(unsigned long t) {  // NOLINT
+inline long GetReferenceableValue(long t) { return t; }       // NOLINT
+inline unsigned long GetReferenceableValue(unsigned long t) { // NOLINT
   return t;
 }
-inline long long GetReferenceableValue(long long t) { return t; }  // NOLINT
-inline unsigned long long GetReferenceableValue(                   // NOLINT
-    unsigned long long t) {                                        // NOLINT
+inline long long GetReferenceableValue(long long t) { return t; } // NOLINT
+inline unsigned long long GetReferenceableValue(                  // NOLINT
+    unsigned long long t) {                                       // NOLINT
   return t;
 }
 
-}  // namespace logging_internal
-}  // namespace rdss
+} // namespace logging_internal
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_CHECK_OPS_H_
+#endif // RDSS_LOGGING_CHECK_OPS_H_

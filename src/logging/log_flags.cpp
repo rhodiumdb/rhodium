@@ -15,8 +15,7 @@
 
 #include "log_flags.hpp"
 
-ABSL_FLAG(int, minloglevel,
-          static_cast<int>(absl::LogSeverity::kInfo),
+ABSL_FLAG(int, minloglevel, static_cast<int>(absl::LogSeverity::kInfo),
           "Messages logged at a lower level than this don't actually "
           "get logged anywhere");
 

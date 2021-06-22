@@ -25,24 +25,20 @@ namespace logging_internal {
 // nullptr_t, or a null char* or const char*, in which case it returns "(null)".
 // This allows streaming NullGuard<T>::Guard(v) to an output stream without
 // hitting undefined behavior for null values.
-template <typename T>
-struct NullGuard {
-  static const T& Guard(const T& v) { return v; }
+template <typename T> struct NullGuard {
+  static const T &Guard(const T &v) { return v; }
 };
-template <>
-struct NullGuard<char*> {
-  static const char* Guard(const char* v) { return v ? v : "(null)"; }
+template <> struct NullGuard<char *> {
+  static const char *Guard(const char *v) { return v ? v : "(null)"; }
 };
-template <>
-struct NullGuard<const char*> {
-  static const char* Guard(const char* v) { return v ? v : "(null)"; }
+template <> struct NullGuard<const char *> {
+  static const char *Guard(const char *v) { return v ? v : "(null)"; }
 };
-template <>
-struct NullGuard<std::nullptr_t> {
-  static const char* Guard(const std::nullptr_t&) { return "(null)"; }
+template <> struct NullGuard<std::nullptr_t> {
+  static const char *Guard(const std::nullptr_t &) { return "(null)"; }
 };
 
-}  // namespace logging_internal
-}  // namespace rdss
+} // namespace logging_internal
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_NULL_GUARD_H_
+#endif // RDSS_LOGGING_NULL_GUARD_H_

@@ -42,8 +42,8 @@
 // is equivalent to
 //
 //   RDSS_LOGGING_INTERNAL_CONDITION(x && y).
-#define RDSS_LOGGING_INTERNAL_CONDITION(condition) \
-  !(condition) ? (void)0 : ::rdss::logging_internal::LogMessageVoidify()&&
+#define RDSS_LOGGING_INTERNAL_CONDITION(condition)                             \
+  !(condition) ? (void)0 : ::rdss::logging_internal::LogMessageVoidify() &&
 
 namespace rdss {
 namespace logging_internal {
@@ -52,12 +52,12 @@ namespace logging_internal {
 // macros. This avoids compiler warnings like "value computed is not used" and
 // "statement has no effect".
 class LogMessageVoidify {
- public:
+public:
   // This has to be an operator with a precedence lower than << but higher than
   // ?:
-  void operator&&(const rdss::logging_internal::LogMessage&) {}
-  void operator&&(const std::ostream&) {}
-  void operator&&(const rdss::logging_internal::NullStream&) {}
+  void operator&&(const rdss::logging_internal::LogMessage &) {}
+  void operator&&(const std::ostream &) {}
+  void operator&&(const rdss::logging_internal::NullStream &) {}
 
   // This overload allows `RDSS_LOGGING_INTERNAL_CONDITION` to be used
   // consecutively.
@@ -77,7 +77,7 @@ class LogMessageVoidify {
   bool operator&&(bool b) { return b; }
 };
 
-}  // namespace logging_internal
-}  // namespace rdss
+} // namespace logging_internal
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_CONDITION_H_
+#endif // RDSS_LOGGING_CONDITION_H_

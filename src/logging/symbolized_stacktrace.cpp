@@ -28,12 +28,12 @@ std::string GetSymbolizedStackTraceAsString(int max_depth, int skip_count,
                                             bool demangle) {
   std::string result;
   int skip_count_including_self = skip_count + 1;
-  std::vector<void*> stack_trace;
+  std::vector<void *> stack_trace;
   stack_trace.resize(max_depth);
   stack_trace.resize(absl::GetStackTrace(stack_trace.data(), max_depth,
                                          skip_count_including_self));
   std::array<char, 256> symbol_name_buffer;
-  for (void* pc : stack_trace) {
+  for (void *pc : stack_trace) {
     if (absl::Symbolize(pc, symbol_name_buffer.data(),
                         symbol_name_buffer.size())) {
       result += absl::StrFormat("%08p: %s\n", pc, symbol_name_buffer.data());
@@ -44,4 +44,4 @@ std::string GetSymbolizedStackTraceAsString(int max_depth, int skip_count,
   return result;
 }
 
-}  // namespace rdss
+} // namespace rdss
