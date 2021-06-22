@@ -21,7 +21,7 @@
 #define ASSIGN_OR_RETURN_HELPER(lhs, rhs, temp) \
     auto temp = (rhs);                          \
     if(!temp.ok()) { return temp.status(); }    \
-    lhs = *temp;
+    lhs = std::move(*temp);
 
 #define ASSIGN_OR_RETURN(lhs, rhs)                                      \
     ASSIGN_OR_RETURN_HELPER(lhs, rhs, CONCAT(temporary, __COUNTER__))
