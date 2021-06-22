@@ -17,12 +17,10 @@
 
 #include <cstdint>
 #include <functional>
-#include <sstream>
 #include <string>
 #include <vector>
 
 #include <absl/container/btree_set.h>
-#include <absl/container/flat_hash_set.h>
 #include <absl/memory/memory.h>
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_format.h>
@@ -30,15 +28,13 @@
 #include <absl/strings/str_split.h>
 #include <absl/types/optional.h>
 
+#include "attr.hpp"
+#include "predicate.hpp"
 #include "logging/logging.hpp"
 
 namespace rdss {
 
 ////////////////////////////////////////////////////////////////////////////////
-
-using Attr = int32_t;
-using AttrPermutation = std::vector<Attr>;
-using AttrPartialPermutation = std::vector<absl::optional<Attr>>;
 
 template<typename T>
 struct Viewed {
@@ -88,105 +84,6 @@ struct Function {
     std::string name;
     int32_t arguments;
     int32_t results;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-
-struct Predicate {
-    virtual std::string ToString() const = 0;
-    virtual ~Predicate() = default;
-};
-
-struct PredicateFactory {
-    std::vector<std::unique_ptr<Predicate>> predicates;
-
-    template<typename T, typename... Args>
-    T* Make(Args&&... args) {
-        std::unique_ptr<T> value =
-            absl::make_unique<T>(std::forward<Args>(args)...);
-        T* ptr = value.get();
-        predicates.push_back(std::move(value));
-        return ptr;
-    }
-};
-
-struct PredicateAnd : public Predicate {
-    std::vector<Predicate*> children;
-
-    explicit PredicateAnd(
-        absl::Span<Predicate* const> children_)
-        : children(children_.begin(), children_.end()) {}
-
-    std::string ToString() const override {
-        std::vector<std::string> child_strings;
-        for (Predicate* child : children) {
-            child_strings.push_back(child->ToString());
-        }
-        return absl::StrCat("(", absl::StrJoin(child_strings, " && "), ")");
-    }
-};
-
-struct PredicateOr : public Predicate {
-    std::vector<Predicate*> children;
-
-    explicit PredicateOr(
-        absl::Span<Predicate* const> children_)
-        : children(children_.begin(), children_.end()) {}
-
-    std::string ToString() const override {
-        std::vector<std::string> child_strings;
-        for (Predicate* child : children) {
-            child_strings.push_back(child->ToString());
-        }
-        return absl::StrCat("(", absl::StrJoin(child_strings, " || "), ")");
-    }
-};
-
-struct PredicateNot : public Predicate {
-    Predicate* pred;
-
-    explicit PredicateNot(Predicate* pred_)
-        : pred(pred_) {}
-
-    std::string ToString() const override {
-        return absl::StrCat("!", pred->ToString());
-    }
-};
-
-struct PredicateLike : public Predicate {
-    Attr attr;
-    std::string string;
-
-    PredicateLike(Attr attr_, const std::string& string_)
-        : attr(attr_), string(string_) {}
-
-    std::string ToString() const override {
-        return absl::StrFormat("(attr%d LIKE \"%s\")", attr, string);
-    }
-};
-
-struct PredicateLessThan : public Predicate {
-    Attr attr;
-    int32_t integer;
-
-    PredicateLessThan(Attr attr_, int32_t integer_)
-        : attr(attr_), integer(integer_) {}
-
-    std::string ToString() const override {
-        return absl::StrFormat("(attr%d < %d)", attr, integer);
-    }
-};
-
-struct PredicateEquals : public Predicate {
-    Attr attr;
-    int32_t integer;
-
-    PredicateEquals(Attr attr_, int32_t integer_)
-        : attr(attr_), integer(integer_) {}
-
-    std::string ToString() const override {
-        return absl::StrFormat("(attr%d ≡ %d)", attr, integer);
-    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -465,14 +362,11 @@ struct TypeRow : public Type {
         : elements(elements_.begin(), elements_.end()) {}
 
     std::string ToCpp() const override {
-        std::stringstream ss;
-        ss << "std::tuple<";
         std::vector<std::string> types;
         for (const auto& type : this->elements) {
             types.push_back(type->ToCpp());
         }
-        ss << absl::StrJoin(types, ", ") << ">";
-        return ss.str();
+        return absl::StrFormat("std::tuple<%s>", absl::StrJoin(types, ", "));
     }
 };
 
@@ -540,13 +434,13 @@ inline std::string Indent(absl::string_view str, int32_t n) {
     std::vector<absl::string_view> lines = absl::StrSplit(str, '\n');
     std::string indent;
     indent.resize(4 * n, ' ');
-    std::stringstream ss;
-    for (auto line : lines) {
+    std::string result;
+    for (absl::string_view line : lines) {
         if (!line.empty()) {
-            ss << indent << line << "\n";
+            absl::StrAppend(&result, indent, line, "\n");
         }
     }
-    return ss.str();
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
