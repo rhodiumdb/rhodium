@@ -6,7 +6,7 @@
 #include <absl/strings/str_split.h>
 #include <absl/strings/string_view.h>
 
-#include "../src/filesystem.hpp"
+#include "../src/filesystem/filesystem.hpp"
 #include "../src/ghd.hpp"
 
 absl::optional<rdss::Hypergraph<std::string>>

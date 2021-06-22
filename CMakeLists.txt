@@ -22,11 +22,18 @@ target_link_libraries(rdss_logging
   absl::flags
   absl::time)
 
+add_library(rdss_filesystem
+  src/filesystem/temp_directory.cpp)
+target_link_libraries(rdss_filesystem
+  absl::strings
+  absl::statusor)
+
 find_package(absl REQUIRED)
 add_executable(rdss
   src/rdss.cpp
   src/ast.cpp)
 target_link_libraries(rdss
+  rdss_filesystem
   rdss_logging
   absl::hash
   absl::strings
@@ -42,6 +49,7 @@ add_executable(
 )
 target_link_libraries(
   fhd_tests
+  rdss_filesystem
   rdss_logging
   absl::hash
   absl::strings
