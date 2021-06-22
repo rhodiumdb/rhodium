@@ -65,7 +65,7 @@ std::string DataStructure::ToCpp(FreshVariableSource* source) const {
     for (const auto& method : this->methods) {
         ss << Indent(method.ToCpp(source), 1);
     }
-    ss << "}\n";
+    ss << "};\n";
     return ss.str();
 }
 

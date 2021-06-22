@@ -26,21 +26,29 @@
 
 namespace rdss {
 
+namespace {
+
 absl::Status ErrNoToStatusWithFilename(
     int errno_value,
-    const std::filesystem::path& file_name
-) {
+    const std::filesystem::path& file_name) {
     std::stringstream ss;
 
     ss << "Error Code: " << errno_value;
     ss << "\nPath was: " << file_name << "\n";
-    // TODO return an actual error
-    return absl::UnknownError(ss.str());
+    return absl::InternalError(ss.str());
 }
 
+}  // namespace
+
+// Reads and returns the contents of the file `file_name`.
+//
+// Typical return codes (not guaranteed exhaustive):
+//  * StatusCode::kOk
+//  * StatusCode::kPermissionDenied (file not readable)
+//  * StatusCode::kNotFound (no such file)
+//  * StatusCode::kUnknown (a Read or Open error occurred)
 absl::StatusOr<std::string> GetFileContents(
-    const std::filesystem::path& file_name
-) {
+    const std::filesystem::path& file_name) {
     // Use POSIX C APIs instead of C++ iostreams to avoid exceptions.
     std::string result;
 
@@ -65,6 +73,51 @@ absl::StatusOr<std::string> GetFileContents(
         return ErrNoToStatusWithFilename(errno, file_name);
     }
     return std::move(result);
+}
+
+// Writes the data provided in `content` to the file `file_name`, overwriting
+// any existing content. Fails if directory does not exist.
+//
+// NOTE: Will return OK iff all of the data in `content` was written.
+// May write some of the data and return an error.
+//
+// WARNING: The file update is NOT guaranteed to be atomic.
+//
+// Typical return codes (not guaranteed exhaustive):
+//  * StatusCode::kOk
+//  * StatusCode::kPermissionDenied (file not writable)
+//  * StatusCode::kUnknown (a Write or Open error occurred)
+absl::Status SetFileContents(const std::filesystem::path& file_name,
+                             absl::string_view content) {
+    // Use POSIX C APIs instead of C++ iostreams to avoid exceptions.
+    int fd = open(file_name.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0664);
+    if (fd == -1) {
+        return ErrNoToStatusWithFilename(errno, file_name);
+    }
+
+    // Clear existing contents
+    if (ftruncate(fd, 0) == -1) {
+        return ErrNoToStatusWithFilename(errno, file_name);
+    }
+
+    ssize_t written = 0;
+    while (written < content.size()) {
+        ssize_t n = write(fd, content.data() + written,
+                          content.size() - written);
+        if (n < 0) {
+            if (errno == EAGAIN) {
+                continue;
+            }
+            close(fd);
+            return ErrNoToStatusWithFilename(errno, file_name);
+        }
+        written += n;
+    }
+
+    if (close(fd) != 0) {
+        return ErrNoToStatusWithFilename(errno, file_name);
+    }
+    return absl::OkStatus();
 }
 
 } // namespace rdss

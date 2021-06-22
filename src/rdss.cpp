@@ -17,15 +17,125 @@
 #include "ghd.hpp"
 #include "interpreter.hpp"
 #include "macros.hpp"
+#include "subprocess.hpp"
+#include "logging/logging.hpp"
+#include "filesystem/filesystem.hpp"
+#include "filesystem/temp_directory.hpp"
 
 #include <cstdlib>
 #include <iostream>
+#include <filesystem>
 
 #include <absl/memory/memory.h>
 #include <absl/status/status.h>
 #include <absl/status/statusor.h>
 
 namespace rdss {
+
+absl::StatusOr<std::string> RunGCC(absl::string_view generated_code,
+                                   absl::string_view testing_code) {
+    ASSIGN_OR_RETURN(TempDirectory temp_dir, TempDirectory::Create());
+
+    std::filesystem::path main_file = temp_dir.path() / "main.cpp";
+
+    RETURN_IF_ERROR(
+        SetFileContents(main_file,
+                        absl::StrCat(
+                            "#include <iostream>\n",
+                            "#include <absl/container/flat_hash_set.h>\n",
+                            "#include <absl/container/flat_hash_map.h>\n",
+                            "#include <absl/strings/str_format.h>\n",
+                            "#include <absl/strings/str_join.h>\n",
+                            "\n",
+                            generated_code,
+                            "\n",
+                            "int main() {\n",
+                            testing_code,
+                            "return 0;\n",
+                            "}\n")));
+
+    ASSIGN_OR_RETURN(
+        auto gcc_output_pair,
+        InvokeSubprocess({"/usr/bin/env", "g++", "-o", "test",
+                "-labsl_bad_any_cast_impl",
+                "-labsl_bad_optional_access",
+                "-labsl_bad_variant_access",
+                "-labsl_base",
+                "-labsl_city",
+                "-labsl_civil_time",
+                "-labsl_cord",
+                "-labsl_debugging_internal",
+                "-labsl_demangle_internal",
+                "-labsl_examine_stack",
+                "-labsl_exponential_biased",
+                "-labsl_failure_signal_handler",
+                "-labsl_flags_commandlineflag_internal",
+                "-labsl_flags_commandlineflag",
+                "-labsl_flags_config",
+                "-labsl_flags_internal",
+                "-labsl_flags_marshalling",
+                "-labsl_flags_parse",
+                "-labsl_flags_private_handle_accessor",
+                "-labsl_flags_program_name",
+                "-labsl_flags_reflection",
+                "-labsl_flags",
+                "-labsl_flags_usage_internal",
+                "-labsl_flags_usage",
+                "-labsl_graphcycles_internal",
+                "-labsl_hash",
+                "-labsl_hashtablez_sampler",
+                "-labsl_int128",
+                "-labsl_leak_check_disable",
+                "-labsl_leak_check",
+                "-labsl_log_severity",
+                "-labsl_malloc_internal",
+                "-labsl_periodic_sampler",
+                "-labsl_random_distributions",
+                "-labsl_random_internal_distribution_test_util",
+                "-labsl_random_internal_platform",
+                "-labsl_random_internal_pool_urbg",
+                "-labsl_random_internal_randen_hwaes_impl",
+                "-labsl_random_internal_randen_hwaes",
+                "-labsl_random_internal_randen_slow",
+                "-labsl_random_internal_randen",
+                "-labsl_random_internal_seed_material",
+                "-labsl_random_seed_gen_exception",
+                "-labsl_random_seed_sequences",
+                "-labsl_raw_hash_set",
+                "-labsl_raw_logging_internal",
+                "-labsl_scoped_set_env",
+                "-labsl_spinlock_wait",
+                "-labsl_stacktrace",
+                "-labsl_statusor",
+                "-labsl_status",
+                "-labsl_strerror",
+                "-labsl_str_format_internal",
+                "-labsl_strings_internal",
+                "-labsl_strings",
+                "-labsl_symbolize",
+                "-labsl_synchronization",
+                "-labsl_throw_delegate",
+                "-labsl_time",
+                "-labsl_time_zone",
+                "main.cpp"},
+            temp_dir.path()));
+    auto [gcc_stdout, gcc_stderr] = gcc_output_pair;
+    RDSS_VLOG(1) << "gcc_stdout: \"" << gcc_stdout << "\"\n";
+    RDSS_VLOG(1) << "gcc_stderr: \"" << gcc_stderr << "\"\n";
+
+    std::filesystem::path main_exec = temp_dir.path() / "test";
+
+    ASSIGN_OR_RETURN(
+        auto main_output_pair,
+        InvokeSubprocess({"test"}, temp_dir.path()));
+    auto [main_stdout, main_stderr] = main_output_pair;
+    RDSS_VLOG(1) << "main_stdout: \"" << main_stdout << "\"\n";
+    RDSS_VLOG(1) << "main_stderr: \"" << main_stderr << "\"\n";
+
+    RETURN_IF_ERROR(std::move(temp_dir).Cleanup());
+
+    return main_stdout;
+}
 
 void TestGHD() {
     Hypergraph<int> graph;
@@ -270,11 +380,38 @@ absl::Status TestCodegen() {
 
     FreshVariableSource source;
 
-    Codegen codegen("example", &source, typing_context);
+    Codegen codegen("Example", &source, typing_context);
 
-    RETURN_IF_ERROR(codegen.Run(view));
+    RETURN_IF_ERROR(codegen.Run(semijoin));
 
-    std::cerr << "DEBUG: codegen: " << codegen.ds.ToCpp(&source) << "\n";
+    std::string generated = codegen.ds.ToCpp(&source);
+
+    std::cerr << "DEBUG: codegen: " << generated << "\n";
+
+    std::string test_code;
+
+    absl::StrAppend(&test_code,
+                    "Example test;", "\n",
+                    "test.R_insert({0, 0});", "\n",
+                    "test.R_insert({0, 1});", "\n",
+                    "test.R_insert({5, 1});", "\n",
+                    "test.R_insert({0, 2});", "\n",
+                    "test.R_insert({0, 3});", "\n",
+                    "test.R_insert({6, 3});", "\n",
+                    "test.S_insert({1});", "\n",
+                    "test.S_insert({3});", "\n",
+                    "std::vector<std::tuple<int32_t, int32_t>> sorted(test.fresh0.begin(), test.fresh0.end());", "\n",
+                    "std::sort(sorted.begin(), sorted.end());", "\n",
+                    "std::vector<std::string> sorted_strings;", "\n"
+                    "for (const auto& [x, y] : sorted) {", "\n",
+                    "    sorted_strings.push_back(absl::StrFormat(\"{%d, %d}\", x, y));", "\n",
+                    "}", "\n",
+                    "std::cout << \"{\" << absl::StrJoin(sorted_strings, \", \") << \"}\\n\";", "\n",
+                    "");
+
+    ASSIGN_OR_RETURN(std::string output, RunGCC(generated, test_code));
+
+    std::cerr << "DEBUG: execution output: " << output << "\n";
 
     return absl::OkStatus();
 }
