@@ -24,7 +24,7 @@ namespace rdss {
 // must be thread-safe because a shared instance will be called from whichever
 // thread ran the `LOG()` line.
 class LogSink {
- public:
+public:
   virtual ~LogSink() = default;
 
   // `Send` is called synchronously during the log statement. The logging module
@@ -38,7 +38,7 @@ class LogSink {
   // `WaitTillSent` completes, so implementations may store a pointer to or
   // copy of `entry` (e.g. in a thread local variable) for use in
   // `WaitTillSent`.
-  virtual void Send(const LogEntry& entry) = 0;
+  virtual void Send(const LogEntry &entry) = 0;
 
   // `WaitTillSent` blocks the calling thread (the thread that generated a log
   // message) until the sink has finished processing the log message.
@@ -52,6 +52,6 @@ class LogSink {
   virtual void WaitTillSent() {}
 };
 
-}  // namespace rdss
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_LOG_SINK_H_
+#endif // RDSS_LOGGING_LOG_SINK_H_

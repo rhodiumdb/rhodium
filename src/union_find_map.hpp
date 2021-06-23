@@ -31,18 +31,17 @@ namespace rdss {
 //
 // Size is limited to roughly 2^32 elements, so that the offsets can be 32 bits
 // rather than 64.
-template <typename K, typename V>
-class UnionFindMap {
- public:
+template <typename K, typename V> class UnionFindMap {
+public:
   UnionFindMap() = default;
 
   // Insert the given key/value pair.
   //
   // If a value already exists at that key, the value is replaced.
   // `V` must be copyable.
-  void Insert(const K& key, const V& value) {
+  void Insert(const K &key, const V &value) {
     this->Insert(key, value,
-                 [](const V& old_val, const V& new_val) { return new_val; });
+                 [](const V &old_val, const V &new_val) { return new_val; });
   }
 
   // Insert the given key/value pair.
@@ -51,8 +50,7 @@ class UnionFindMap {
   // existing value, if there is one, and should have type compatible with
   // `std::function<V(const V&, const V&)>`. The first argument is the old
   // value, and the second argument is the inserted value.
-  template <typename F>
-  void Insert(const K& key, const V& value, F merge) {
+  template <typename F> void Insert(const K &key, const V &value, F merge) {
     if (key_to_index_.contains(key)) {
       uint32_t index = FindRoot(GetIndex(key).value());
       values_.at(index) = merge(values_.at(index), value);
@@ -68,7 +66,7 @@ class UnionFindMap {
   // Given a key, returns the representative element in that key's equivalence
   // class, along with the associated value. Returns `absl::nullopt` if the
   // given key has never been inserted.
-  absl::optional<std::pair<K, V&>> Find(const K& key) {
+  absl::optional<std::pair<K, V &>> Find(const K &key) {
     if (auto index = GetIndex(key)) {
       uint32_t found = FindRoot(index.value());
       return {{keys_.at(found), values_.at(found)}};
@@ -87,8 +85,7 @@ class UnionFindMap {
   // Note that if two keys are merged, the merged value is stored twice in this
   // data structure, so `V` must be copyable and should be small if space is a
   // concern.
-  template <typename F>
-  bool Union(const K& x, const K& y, F merge) {
+  template <typename F> bool Union(const K &x, const K &y, F merge) {
     absl::optional<uint32_t> x_index = GetIndex(x);
     if (!x_index.has_value()) {
       return false;
@@ -117,21 +114,21 @@ class UnionFindMap {
   }
 
   // Returns true if the iven key was ever inserted.
-  bool Contains(const K& key) const { return key_to_index_.contains(key); }
+  bool Contains(const K &key) const { return key_to_index_.contains(key); }
 
   // Returns every key ever inserted, with unspecified ordering.
-  const std::vector<K>& GetKeys() const { return keys_; }
+  const std::vector<K> &GetKeys() const { return keys_; }
 
   // Returns the smallest element of every equivalence class.
   absl::flat_hash_set<K> GetRepresentatives() {
     absl::flat_hash_set<K> result;
-    for (const K& key : keys_) {
+    for (const K &key : keys_) {
       result.insert(Find(key)->first);
     }
     return result;
   }
 
- private:
+private:
   // The `parent` field should be a valid index into `nodes_` et al.
   // A root node will have itself as its parent.
   struct Node {
@@ -139,7 +136,7 @@ class UnionFindMap {
     uint32_t size;
   };
 
-  absl::optional<uint32_t> GetIndex(const K& key) {
+  absl::optional<uint32_t> GetIndex(const K &key) {
     if (!key_to_index_.contains(key)) {
       return absl::nullopt;
     }
@@ -174,6 +171,6 @@ class UnionFindMap {
   std::vector<Node> nodes_;
 };
 
-}  // namespace rdss
+} // namespace rdss
 
-#endif  // RDSS_UNION_FIND_MAP_H_
+#endif // RDSS_UNION_FIND_MAP_H_

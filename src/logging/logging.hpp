@@ -163,16 +163,16 @@
 // in comprise the logged message. Example:
 //
 //   RDSS_LOG(INFO) << "Found " << num_cookies << " cookies";
-#define RDSS_LOG(severity) \
-  switch (0)              \
-  default:                \
+#define RDSS_LOG(severity)                                                     \
+  switch (0)                                                                   \
+  default:                                                                     \
     RDSS_LOGGING_INTERNAL_LOG_##severity.stream()
 
-// `RDSS_VLOG` uses numeric levels to provide verbose logging that can configured
-// at runtime, including at a per-module level. `RDSS_VLOG` statements are
-// logged at `INFO` severity if they are logged at all; the numeric levels are
-// on a different scale than the proper severity levels. Positive levels are
-// disabled by default. Negative levels should not be used.
+// `RDSS_VLOG` uses numeric levels to provide verbose logging that can
+// configured at runtime, including at a per-module level. `RDSS_VLOG`
+// statements are logged at `INFO` severity if they are logged at all; the
+// numeric levels are on a different scale than the proper severity levels.
+// Positive levels are disabled by default. Negative levels should not be used.
 // Example:
 //
 //   RDSS_VLOG(1) << "I print when you run the program with --v=1 or higher";
@@ -186,16 +186,16 @@
 // If the condition is false, nothing is logged. Example:
 //
 //   RDSS_LOG_IF(INFO, num_cookies > 10) << "Got lots of cookies";
-#define RDSS_LOG_IF(severity, condition)       \
-  switch (0)                                   \
-  default:                                     \
-    RDSS_LOGGING_INTERNAL_CONDITION(condition) \
+#define RDSS_LOG_IF(severity, condition)                                       \
+  switch (0)                                                                   \
+  default:                                                                     \
+    RDSS_LOGGING_INTERNAL_CONDITION(condition)                                 \
   RDSS_LOGGING_INTERNAL_LOG_##severity.stream()
-#define RDSS_VLOG_IF(verbose_level, condition)                      \
-  switch (0)                                                        \
-  default:                                                          \
-    RDSS_LOGGING_INTERNAL_CONDITION((condition) &&                  \
-                                    RDSS_VLOG_IS_ON(verbose_level)) \
+#define RDSS_VLOG_IF(verbose_level, condition)                                 \
+  switch (0)                                                                   \
+  default:                                                                     \
+    RDSS_LOGGING_INTERNAL_CONDITION((condition) &&                             \
+                                    RDSS_VLOG_IS_ON(verbose_level))            \
   RDSS_LOGGING_INTERNAL_LOG_INFO.WithVerbosity(verbose_level).stream()
 
 // -----------------------------------------------------------------------------
@@ -219,20 +219,20 @@
 // Might produce a message like:
 //
 //   Check failed: !cheese.empty() Out of Cheese
-#define RDSS_CHECK(condition)                                         \
-  switch (0)                                                          \
-  default:                                                            \
-    RDSS_LOGGING_INTERNAL_CONDITION(ABSL_PREDICT_FALSE(!(condition))) \
+#define RDSS_CHECK(condition)                                                  \
+  switch (0)                                                                   \
+  default:                                                                     \
+    RDSS_LOGGING_INTERNAL_CONDITION(ABSL_PREDICT_FALSE(!(condition)))          \
   RDSS_LOGGING_INTERNAL_CHECK(#condition).stream()
 
 // `RDSS_QCHECK` behaves like `RDSS_CHECK` but does not print a full stack trace
 // and does not run registered error handlers (as `QFATAL`). It is useful when
 // the problem is definitely unrelated to program flow, e.g. when validating
 // user input.
-#define RDSS_QCHECK(condition)                                        \
-  switch (0)                                                          \
-  default:                                                            \
-    RDSS_LOGGING_INTERNAL_CONDITION(ABSL_PREDICT_FALSE(!(condition))) \
+#define RDSS_QCHECK(condition)                                                 \
+  switch (0)                                                                   \
+  default:                                                                     \
+    RDSS_LOGGING_INTERNAL_CONDITION(ABSL_PREDICT_FALSE(!(condition)))          \
   RDSS_LOGGING_INTERNAL_QCHECK(#condition).stream()
 
 // `RDSS_DCHECK` behaves like `RDSS_CHECK` in debug mode and does nothing
@@ -241,8 +241,8 @@
 #ifndef NDEBUG
 #define RDSS_DCHECK(condition) RDSS_CHECK(condition)
 #else
-#define RDSS_DCHECK(condition) \
-  while (false && (condition)) \
+#define RDSS_DCHECK(condition)                                                 \
+  while (false && (condition))                                                 \
   ::rdss::logging_internal::NullStreamFatal().stream()
 #endif
 
@@ -268,29 +268,29 @@
 //
 // WARNING: Passing `NULL` as an argument to `RDSS_CHECK_EQ` and similar macros
 // does not compile. Use `nullptr` instead.
-#define RDSS_CHECK_EQ(val1, val2) \
+#define RDSS_CHECK_EQ(val1, val2)                                              \
   RDSS_LOGGING_INTERNAL_CHECK_OP(Check_EQ, ==, val1, val2)
-#define RDSS_CHECK_NE(val1, val2) \
+#define RDSS_CHECK_NE(val1, val2)                                              \
   RDSS_LOGGING_INTERNAL_CHECK_OP(Check_NE, !=, val1, val2)
-#define RDSS_CHECK_LE(val1, val2) \
+#define RDSS_CHECK_LE(val1, val2)                                              \
   RDSS_LOGGING_INTERNAL_CHECK_OP(Check_LE, <=, val1, val2)
-#define RDSS_CHECK_LT(val1, val2) \
+#define RDSS_CHECK_LT(val1, val2)                                              \
   RDSS_LOGGING_INTERNAL_CHECK_OP(Check_LT, <, val1, val2)
-#define RDSS_CHECK_GE(val1, val2) \
+#define RDSS_CHECK_GE(val1, val2)                                              \
   RDSS_LOGGING_INTERNAL_CHECK_OP(Check_GE, >=, val1, val2)
-#define RDSS_CHECK_GT(val1, val2) \
+#define RDSS_CHECK_GT(val1, val2)                                              \
   RDSS_LOGGING_INTERNAL_CHECK_OP(Check_GT, >, val1, val2)
-#define RDSS_QCHECK_EQ(val1, val2) \
+#define RDSS_QCHECK_EQ(val1, val2)                                             \
   RDSS_LOGGING_INTERNAL_QCHECK_OP(Check_EQ, ==, val1, val2)
-#define RDSS_QCHECK_NE(val1, val2) \
+#define RDSS_QCHECK_NE(val1, val2)                                             \
   RDSS_LOGGING_INTERNAL_QCHECK_OP(Check_NE, !=, val1, val2)
-#define RDSS_QCHECK_LE(val1, val2) \
+#define RDSS_QCHECK_LE(val1, val2)                                             \
   RDSS_LOGGING_INTERNAL_QCHECK_OP(Check_LE, <=, val1, val2)
-#define RDSS_QCHECK_LT(val1, val2) \
+#define RDSS_QCHECK_LT(val1, val2)                                             \
   RDSS_LOGGING_INTERNAL_QCHECK_OP(Check_LT, <, val1, val2)
-#define RDSS_QCHECK_GE(val1, val2) \
+#define RDSS_QCHECK_GE(val1, val2)                                             \
   RDSS_LOGGING_INTERNAL_QCHECK_OP(Check_GE, >=, val1, val2)
-#define RDSS_QCHECK_GT(val1, val2) \
+#define RDSS_QCHECK_GT(val1, val2)                                             \
   RDSS_LOGGING_INTERNAL_QCHECK_OP(Check_GT, >, val1, val2)
 
 #ifndef NDEBUG
@@ -329,15 +329,15 @@
 //
 // Use `RDSS_CHECK(ptr != nullptr)` if the returned pointer is
 // unused.
-#define RDSS_DIE_IF_NULL(val) \
+#define RDSS_DIE_IF_NULL(val)                                                  \
   ::rdss::logging_internal::DieIfNull(__FILE__, __LINE__, #val, (val))
 
 namespace rdss {
 
 // Add or remove a `LogSink` as a consumer of logging data. Thread-safe.
-void AddLogSink(LogSink* sink);
-void RemoveLogSink(LogSink* sink);
+void AddLogSink(LogSink *sink);
+void RemoveLogSink(LogSink *sink);
 
-}  // namespace rdss
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_LOGGING_H_
+#endif // RDSS_LOGGING_LOGGING_H_

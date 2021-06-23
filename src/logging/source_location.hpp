@@ -46,21 +46,19 @@ namespace xabsl {
 // `xabsl::SourceLocation` is copyable.
 class SourceLocation {
   struct PrivateTag {
-   private:
+  private:
     explicit PrivateTag() = default;
     friend class SourceLocation;
   };
 
- public:
+public:
   // Avoid this constructor; it populates the object with dummy values.
-  constexpr SourceLocation()
-      : line_(0),
-        file_name_(nullptr) {}
+  constexpr SourceLocation() : line_(0), file_name_(nullptr) {}
 
   // Wrapper to invoke the private constructor below. This should only be used
   // by the `XABSL_LOC` macro, hence the name.
   static constexpr SourceLocation DoNotInvokeDirectly(std::uint_least32_t line,
-                                                       const char* file_name) {
+                                                      const char *file_name) {
     return SourceLocation(line, file_name);
   }
 
@@ -82,9 +80,10 @@ class SourceLocation {
   //     TracedAdd(1);
   //     TracedAdd(2);
   //   }
-  static constexpr SourceLocation current(
-      PrivateTag = PrivateTag{}, std::uint_least32_t line = __builtin_LINE(),
-      const char* file_name = __builtin_FILE()) {
+  static constexpr SourceLocation
+  current(PrivateTag = PrivateTag{},
+          std::uint_least32_t line = __builtin_LINE(),
+          const char *file_name = __builtin_FILE()) {
     return SourceLocation(line, file_name);
   }
 #else
@@ -98,20 +97,19 @@ class SourceLocation {
   constexpr std::uint_least32_t line() const { return line_; }
 
   // The file name of the captured source location.
-  constexpr const char* file_name() const { return file_name_; }
+  constexpr const char *file_name() const { return file_name_; }
 
   // `column()` and `function_name()` are omitted because we don't have a way to
   // support them.
 
- private:
+private:
   // Do not invoke this constructor directly. Instead, use the `XABSL_LOC` macro
   // below.
   //
   // `file_name` must outlive all copies of the `xabsl::SourceLocation` object,
   // so in practice it should be a string literal.
-  constexpr SourceLocation(std::uint_least32_t line, const char* file_name)
-      : line_(line),
-        file_name_(file_name) {}
+  constexpr SourceLocation(std::uint_least32_t line, const char *file_name)
+      : line_(line), file_name_(file_name) {}
 
   friend constexpr int UseUnused() {
     static_assert(SourceLocation(0, nullptr).unused_column_ == 0,
@@ -123,14 +121,14 @@ class SourceLocation {
   // type.
   std::uint_least32_t line_;
   std::uint_least32_t unused_column_ = 0;
-  const char* file_name_;
+  const char *file_name_;
 };
 
-}  // namespace xabsl
+} // namespace xabsl
 
 // If a function takes an `xabsl::SourceLocation` parameter, pass this as the
 // argument.
-#define XABSL_LOC \
+#define XABSL_LOC                                                              \
   ::xabsl::SourceLocation::DoNotInvokeDirectly(__LINE__, __FILE__)
 
 // ABSL_LOC_CURRENT_DEFAULT_ARG
@@ -152,4 +150,4 @@ class SourceLocation {
 #define XABSL_LOC_CURRENT_DEFAULT_ARG
 #endif
 
-#endif  // RDSS_LOGGING_SOURCE_LOCATION_H_
+#endif // RDSS_LOGGING_SOURCE_LOCATION_H_

@@ -29,7 +29,7 @@ class LogMessage;
 // Data returned by pointer or by reference must be copied if they are needed
 // after the lifetime of the `LogEntry`.
 class LogEntry {
- public:
+public:
   // For non-verbose log entries, `verbosity()` returns `kNoVerboseLevel`.
   static constexpr int kNoVerboseLevel = -1;
 
@@ -80,7 +80,7 @@ class LogEntry {
   // Breakdown of `timestamp()` in the local time zone.
   // Prefer using `timestamp()` unless you specifically need this breakdown
   // to do ASCII formatting, etc.
-  const struct tm& timestamp_as_tm() const { return timestamp_as_tm_; }
+  const struct tm &timestamp_as_tm() const { return timestamp_as_tm_; }
 
 #ifdef _WIN32
   uint32_t tid() const { return tid_; }
@@ -98,9 +98,9 @@ class LogEntry {
     text_message_ = text_message;
   }
 
- private:
+private:
   void GenerateTimestampAsTm();
-  void AppendSeverityTimeAndThreadId(std::string* out) const;
+  void AppendSeverityTimeAndThreadId(std::string *out) const;
   std::string FormatPrefix() const;
 
   absl::string_view full_filename_;
@@ -108,7 +108,7 @@ class LogEntry {
   int line_;
   bool prefix_;
   absl::LogSeverity severity_;
-  int verbose_level_;  // >=0 for `VLOG`, etc.; otherwise `kNoVerboseLevel`.
+  int verbose_level_; // >=0 for `VLOG`, etc.; otherwise `kNoVerboseLevel`.
   absl::Time timestamp_;
   struct tm timestamp_as_tm_;
 #ifdef _WIN32
@@ -121,6 +121,6 @@ class LogEntry {
   friend class ::rdss::logging_internal::LogMessage;
 };
 
-}  // namespace rdss
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_LOG_ENTRY_H_
+#endif // RDSS_LOGGING_LOG_ENTRY_H_

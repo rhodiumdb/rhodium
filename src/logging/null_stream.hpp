@@ -31,27 +31,27 @@ namespace logging_internal {
 // compiler can eliminate the whole instance and discard anything that's
 // streamed in.
 class NullStream {
- public:
-  NullStream& stream() { return *this; }
-  NullStream& WithCheckFailureMessage(absl::string_view) { return *this; }
-  NullStream& AtLocation(absl::string_view, int) { return *this; }
-  NullStream& AtLocation(xabsl::SourceLocation) { return *this; }
-  NullStream& NoPrefix() { return *this; }
-  NullStream& WithPerror() { return *this; }
-  NullStream& WithVerbosity(int) { return *this; }
-  NullStream& ToSinkAlso(LogSink*) { return *this; }
-  NullStream& ToSinkOnly(LogSink*) { return *this; }
+public:
+  NullStream &stream() { return *this; }
+  NullStream &WithCheckFailureMessage(absl::string_view) { return *this; }
+  NullStream &AtLocation(absl::string_view, int) { return *this; }
+  NullStream &AtLocation(xabsl::SourceLocation) { return *this; }
+  NullStream &NoPrefix() { return *this; }
+  NullStream &WithPerror() { return *this; }
+  NullStream &WithVerbosity(int) { return *this; }
+  NullStream &ToSinkAlso(LogSink *) { return *this; }
+  NullStream &ToSinkOnly(LogSink *) { return *this; }
 };
 template <typename T>
-inline NullStream& operator<<(NullStream& str, const T&) {
+inline NullStream &operator<<(NullStream &str, const T &) {
   return str;
 }
-inline NullStream& operator<<(NullStream& str,
-                              std::ostream& (*)(std::ostream& os)) {
+inline NullStream &operator<<(NullStream &str,
+                              std::ostream &(*)(std::ostream &os)) {
   return str;
 }
-inline NullStream& operator<<(NullStream& str,
-                              std::ios_base& (*)(std::ios_base& os)) {
+inline NullStream &operator<<(NullStream &str,
+                              std::ios_base &(*)(std::ios_base &os)) {
   return str;
 }
 
@@ -59,12 +59,12 @@ inline NullStream& operator<<(NullStream& str,
 // `LogMessageFatal`, which means it always terminates the process.
 // `DFATAL` and expression-defined severity use `NullStreamMaybeFatal` above.
 class NullStreamFatal : public NullStream {
- public:
+public:
   NullStreamFatal() {}
   ABSL_ATTRIBUTE_NORETURN ~NullStreamFatal() { _exit(1); }
 };
 
-}  // namespace logging_internal
-}  // namespace rdss
+} // namespace logging_internal
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_NULL_STREAM_H_
+#endif // RDSS_LOGGING_NULL_STREAM_H_

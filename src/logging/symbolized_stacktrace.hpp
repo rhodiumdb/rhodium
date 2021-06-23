@@ -32,6 +32,6 @@ std::string GetSymbolizedStackTraceAsString(int max_depth = 50,
                                             int skip_count = 0,
                                             bool demangle = true);
 
-}  // namespace rdss
+} // namespace rdss
 
-#endif  // RDSS_LOGGING_SYMBOLIZED_STACKTRACE_H_
+#endif // RDSS_LOGGING_SYMBOLIZED_STACKTRACE_H_
