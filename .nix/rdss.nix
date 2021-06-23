@@ -14,4 +14,8 @@ stdenv.mkDerivation {
   buildInputs = [ abseil-cpp gtest highway rapidcheck z3 ];
 
   nativeBuildInputs = [ cmake ];
+
+  doCheck = true;
+
+  checkTarget = "test";
 }
