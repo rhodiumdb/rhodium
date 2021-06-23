@@ -34,30 +34,30 @@
 #define RDSS_LOGGING_INTERNAL_SEVERITY_FATAL ::absl::LogSeverity::kFatal
 #define RDSS_LOGGING_INTERNAL_SEVERITY_LEVEL(severity) (severity)
 
-#define RDSS_LOGGING_INTERNAL_LOG_INFO                                         \
-  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__,                     \
+#define RDSS_LOGGING_INTERNAL_LOG_INFO                     \
+  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__, \
                                        ::absl::LogSeverity::kInfo)
-#define RDSS_LOGGING_INTERNAL_LOG_WARNING                                      \
-  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__,                     \
+#define RDSS_LOGGING_INTERNAL_LOG_WARNING                  \
+  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__, \
                                        ::absl::LogSeverity::kWarning)
-#define RDSS_LOGGING_INTERNAL_LOG_ERROR                                        \
-  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__,                     \
+#define RDSS_LOGGING_INTERNAL_LOG_ERROR                    \
+  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__, \
                                        ::absl::LogSeverity::kError)
-#define RDSS_LOGGING_INTERNAL_LOG_FATAL                                        \
+#define RDSS_LOGGING_INTERNAL_LOG_FATAL \
   ::rdss::logging_internal::LogMessageFatal(__FILE__, __LINE__)
-#define RDSS_LOGGING_INTERNAL_LOG_QFATAL                                       \
+#define RDSS_LOGGING_INTERNAL_LOG_QFATAL \
   ::rdss::logging_internal::LogMessageQuietlyFatal(__FILE__, __LINE__)
 
 #ifdef NDEBUG
-#define RDSS_LOGGING_INTERNAL_LOG_DFATAL                                       \
-  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__,                     \
+#define RDSS_LOGGING_INTERNAL_LOG_DFATAL                   \
+  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__, \
                                        ::absl::LogSeverity::kError)
 #else
-#define RDSS_LOGGING_INTERNAL_LOG_DFATAL                                       \
+#define RDSS_LOGGING_INTERNAL_LOG_DFATAL \
   ::rdss::logging_internal::LogMessageFatal(__FILE__, __LINE__)
 #endif
-#define RDSS_LOGGING_INTERNAL_LOG_LEVEL(severity)                              \
-  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__,                     \
+#define RDSS_LOGGING_INTERNAL_LOG_LEVEL(severity)          \
+  ::rdss::logging_internal::LogMessage(__FILE__, __LINE__, \
                                        ::absl::NormalizeLogSeverity(severity))
 
 namespace rdss {
@@ -67,8 +67,8 @@ namespace logging_internal {
 // `line` location. Called when `RDSS_DIE_IF_NULL` fails. Calling this function
 // generates less code than its implementation would if inlined, for a slight
 // code size reduction each time `RDSS_DIE_IF_NULL` is called.
-ABSL_ATTRIBUTE_NORETURN ABSL_ATTRIBUTE_NOINLINE void
-DieBecauseNull(const char *file, int line, const char *exprtext);
+ABSL_ATTRIBUTE_NORETURN ABSL_ATTRIBUTE_NOINLINE void DieBecauseNull(
+    const char* file, int line, const char* exprtext);
 
 // Helper for `RDSS_DIE_IF_NULL`.
 //
@@ -78,8 +78,8 @@ DieBecauseNull(const char *file, int line, const char *exprtext);
 //
 //   Foo() : bar_(RDSS_DIE_IF_NULL(MethodReturningUniquePtr())) {}
 template <typename T>
-ABSL_MUST_USE_RESULT T DieIfNull(const char *file, int line,
-                                 const char *exprtext, T &&t) {
+ABSL_MUST_USE_RESULT T DieIfNull(const char* file, int line,
+                                 const char* exprtext, T&& t) {
   if (ABSL_PREDICT_FALSE(t == nullptr)) {
     // Call a non-inline helper function for a small code size improvement.
     DieBecauseNull(file, line, exprtext);
@@ -87,7 +87,7 @@ ABSL_MUST_USE_RESULT T DieIfNull(const char *file, int line,
   return std::forward<T>(t);
 }
 
-} // namespace logging_internal
-} // namespace rdss
+}  // namespace logging_internal
+}  // namespace rdss
 
-#endif // RDSS_LOGGING_LOGGING_INTERNAL_H_
+#endif  // RDSS_LOGGING_LOGGING_INTERNAL_H_

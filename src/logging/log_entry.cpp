@@ -40,8 +40,7 @@ absl::string_view Basename(absl::string_view filepath) {
 #else
   size_t path = filepath.find_last_of('/');
 #endif
-  if (path != filepath.npos)
-    filepath.remove_prefix(path + 1);
+  if (path != filepath.npos) filepath.remove_prefix(path + 1);
   return filepath;
 }
 
@@ -49,7 +48,7 @@ absl::string_view Basename(absl::string_view filepath) {
 constexpr size_t kFixedPrefixLen =
     sizeof("SMMDD HH:MM:SS.NNNNNN TTTTTTT ") - sizeof("");
 
-char *AppendTwoDigit(char *buf, uint32_t v) {
+char* AppendTwoDigit(char* buf, uint32_t v) {
   buf[1] = v % 10 + '0';
   buf[0] = v / 10 + '0';
   return buf + 2;
@@ -59,8 +58,8 @@ char *AppendTwoDigit(char *buf, uint32_t v) {
 // repetitions of "fill" if the representation is less than "width" characters
 // long.
 // REQUIRES: "out[]" must have sufficient space to hold the ascii string.
-char *AppendUint(char *out, uint32_t v, char fill, int width) {
-  char buf[32]; // Plenty to hold ascii representation of an int
+char* AppendUint(char* out, uint32_t v, char fill, int width) {
+  char buf[32];  // Plenty to hold ascii representation of an int
   int p = 32;
   do {
     buf[--p] = (v % 10) + '0';
@@ -76,15 +75,19 @@ char *AppendUint(char *out, uint32_t v, char fill, int width) {
   return out + n;
 }
 
-} // namespace
+}  // namespace
 
 LogEntry::LogEntry(absl::string_view full_filename, int line,
                    absl::LogSeverity severity, absl::Time timestamp)
-    : full_filename_(full_filename), base_filename_(Basename(full_filename)),
-      line_(line), prefix_(true),
+    : full_filename_(full_filename),
+      base_filename_(Basename(full_filename)),
+      line_(line),
+      prefix_(true),
       severity_(absl::NormalizeLogSeverity(severity)),
-      verbose_level_(kNoVerboseLevel), timestamp_(timestamp),
-      tid_(GetCachedTID()), text_message_("") {
+      verbose_level_(kNoVerboseLevel),
+      timestamp_(timestamp),
+      tid_(GetCachedTID()),
+      text_message_("") {
   GenerateTimestampAsTm();
 }
 
@@ -107,10 +110,10 @@ void LogEntry::GenerateTimestampAsTm() {
 #endif
 }
 
-void LogEntry::AppendSeverityTimeAndThreadId(std::string *out) const {
+void LogEntry::AppendSeverityTimeAndThreadId(std::string* out) const {
   // Append something like 'I0513 17:35:46.294773   27319 ' to *out
   char buf[kFixedPrefixLen];
-  char *p = buf;
+  char* p = buf;
   *p++ = absl::LogSeverityName(severity_)[0];
   p = AppendTwoDigit(p, timestamp_as_tm_.tm_mon + 1);
   p = AppendTwoDigit(p, timestamp_as_tm_.tm_mday);
@@ -146,7 +149,7 @@ std::string LogEntry::FormatPrefix() const {
   absl::StrAppend(&prefix, base_filename_);
   // Generate ':<line>] '
   char buf[kFixedPrefixLen];
-  char *p = buf;
+  char* p = buf;
   *p++ = ':';
   p = AppendUint(p, line_, ' ', 0);
   *p++ = ']';
@@ -168,4 +171,4 @@ std::string LogEntry::FormatPrefix() const {
   return prefix;
 }
 
-} // namespace rdss
+}  // namespace rdss

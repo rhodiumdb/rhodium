@@ -38,17 +38,17 @@ namespace logging_internal {
 // Heap-allocation of `LogMessage` is unsupported. Construction outside of a
 // `RDSS_LOG` macro is strongly discouraged.
 class LogMessage {
-public:
+ public:
   // The size of the buffer in which structured log data is stored, and also of
   // the separate buffer in which text data is stored.
   static constexpr size_t BufferSize() { return 15000; }
 
   // Used for `RDSS_LOG`.
-  LogMessage(const char *file, int line,
+  LogMessage(const char* file, int line,
              absl::LogSeverity severity) ABSL_ATTRIBUTE_COLD;
 
-  LogMessage(const LogMessage &) = delete;
-  LogMessage &operator=(const LogMessage &) = delete;
+  LogMessage(const LogMessage&) = delete;
+  LogMessage& operator=(const LogMessage&) = delete;
 
   ~LogMessage() ABSL_ATTRIBUTE_COLD;
 
@@ -59,38 +59,38 @@ public:
   // our streaming inside a chainable method call instead of explicitly in the
   // macro expansion. Streaming decays the type of the expression from
   // `LogMessage&` to `std::ostream&`.
-  LogMessage &WithCheckFailureMessage(absl::string_view msg);
+  LogMessage& WithCheckFailureMessage(absl::string_view msg);
 
   // Overrides the location inferred from the callsite. The string pointed to
   // by `file` must be valid until the end of the statement.
-  LogMessage &AtLocation(absl::string_view file, int line);
+  LogMessage& AtLocation(absl::string_view file, int line);
   // `loc` doesn't default to `SourceLocation::current()` here since the
   // callsite is already the default location for `LOG` statements.
-  LogMessage &AtLocation(xabsl::SourceLocation loc) {
+  LogMessage& AtLocation(xabsl::SourceLocation loc) {
     return AtLocation(loc.file_name(), loc.line());
   }
 
   // Omits the prefix from this line. The prefix includes metadata about the
   // logged data such as source code location and timestamp.
-  LogMessage &NoPrefix();
+  LogMessage& NoPrefix();
   // Appends to the logged message a colon, a space, a textual description of
   // the current value of `errno` (as by strerror(3)), and the numerical value
   // of `errno`.
-  LogMessage &WithPerror();
+  LogMessage& WithPerror();
   // Sets the verbosity field of the logged message as if it was logged by
   // `RDSS_VLOG(verbose_level)`. Unlike `RDSS_VLOG`, this method does not affect
   // evaluation of the statement when the specified `verbose_level` has been
   // disabled. The only effect is on `LogSink` implementations which make use
   // of the `LogSink::verbosity()` value. The value `LogEntry::kNoVerboseLevel`
   // can be specified to mark the message not verbose.
-  LogMessage &WithVerbosity(int verbose_level);
+  LogMessage& WithVerbosity(int verbose_level);
   // Sends this message to `*sink` in addition to whatever other sinks it would
   // otherwise have been sent to. `sink` must not be null.
-  LogMessage &ToSinkAlso(LogSink *sink);
+  LogMessage& ToSinkAlso(LogSink* sink);
   // Sends this message to `*sink` and no others. `sink` must not be null.
-  LogMessage &ToSinkOnly(LogSink *sink);
+  LogMessage& ToSinkOnly(LogSink* sink);
 
-  LogMessage &stream() { return *this; }
+  LogMessage& stream() { return *this; }
 
   // LogMessage accepts streamed values as if it were an ostream.
 
@@ -133,8 +133,8 @@ public:
   // clang-format on
 
   // Handle stream manipulators e.g. std::endl.
-  LogMessage &operator<<(std::ostream &(*m)(std::ostream &os));
-  LogMessage &operator<<(std::ios_base &(*m)(std::ios_base &os));
+  LogMessage& operator<<(std::ostream& (*m)(std::ostream& os));
+  LogMessage& operator<<(std::ios_base& (*m)(std::ios_base& os));
 
   // Literal strings. This allows us to record C string literals as literals in
   // the logging.proto.Value.
@@ -147,15 +147,16 @@ public:
   // `char[]` below should not be inlined. The compiler typically does not have
   // the string at compile time and cannot replace the call to `strlen` so
   // inlining it increases the binary size.
-  template <int SIZE> LogMessage &operator<<(const char (&buf)[SIZE]);
+  template <int SIZE>
+  LogMessage& operator<<(const char (&buf)[SIZE]);
 
   // This is prevents non-const `char[]` arrays from looking like literals.
   template <int SIZE>
-  LogMessage &operator<<(char (&buf)[SIZE]) ABSL_ATTRIBUTE_NOINLINE;
+  LogMessage& operator<<(char (&buf)[SIZE]) ABSL_ATTRIBUTE_NOINLINE;
 
   // Default: uses `ostream` logging to convert `v` to a string.
   template <typename T>
-  LogMessage &operator<<(const T &v) ABSL_ATTRIBUTE_NOINLINE;
+  LogMessage& operator<<(const T& v) ABSL_ATTRIBUTE_NOINLINE;
 
   // Note: We explicitly do not support `operator<<` for non-const references
   // because it breaks logging of non-integer bitfield types (i.e., enums).
@@ -168,7 +169,7 @@ public:
   // The caller must ensure that this `LogMessage` pointer is not used past the
   // lifetime of the temporary object, e.g. by using it only in the wrapping
   // temporary object.
-  LogMessage *self() { return this; }
+  LogMessage* self() { return this; }
 
   // Call `abort()` or similar to perform `RDSS_LOG(FATAL)` crash.
   // Writes current stack trace to stderr.
@@ -178,24 +179,24 @@ public:
   // that the caller has already generated and written the trace as appropriate.
   ABSL_ATTRIBUTE_NORETURN static void FailWithoutStackTrace();
 
-private:
-  struct LogMessageData; // Opaque type containing message state
+ private:
+  struct LogMessageData;  // Opaque type containing message state
 
   void LogToSinks() const;
 
   void SendToLog();
 
-public:
+ public:
   // Similar to `FailWithoutStackTrace()`, but without `abort()`. Terminates
   // the process with an error exit code.
   ABSL_ATTRIBUTE_NORETURN static void FailQuietly();
 
-protected:
+ protected:
   // After this is called, failures are done as quiet as possible for this log
   // message.
   void SetFailQuietly();
 
-private:
+ private:
   // Checks `FLAGS_log_backtrace_at` and appends a backtrace if appropriate.
   void LogBacktraceIfNeeded();
 
@@ -205,10 +206,10 @@ private:
   // This one dies if the message is fatal.
   void DieIfFatal();
 
-protected:
+ protected:
   void Flush();
 
-private:
+ private:
   // This should be the first data member so that its initializer captures errno
   // before any other initializers alter it (e.g. with calls to new) and so that
   // no other destructors run afterward an alter it (e.g. with calls to delete).
@@ -222,27 +223,29 @@ private:
 };
 
 // Note: the following is declared `ABSL_ATTRIBUTE_NOINLINE`
-template <typename T> LogMessage &LogMessage::operator<<(const T &v) {
+template <typename T>
+LogMessage& LogMessage::operator<<(const T& v) {
   stream_ << NullGuard<T>().Guard(v);
   return *this;
 }
-inline LogMessage &
-LogMessage::operator<<(std::ostream &(*m)(std::ostream &os)) {
+inline LogMessage& LogMessage::operator<<(
+    std::ostream& (*m)(std::ostream& os)) {
   stream_ << m;
   return *this;
 }
-inline LogMessage &
-LogMessage::operator<<(std::ios_base &(*m)(std::ios_base &os)) {
+inline LogMessage& LogMessage::operator<<(
+    std::ios_base& (*m)(std::ios_base& os)) {
   stream_ << m;
   return *this;
 }
 template <int SIZE>
-LogMessage &LogMessage::operator<<(const char (&buf)[SIZE]) {
+LogMessage& LogMessage::operator<<(const char (&buf)[SIZE]) {
   stream_ << buf;
   return *this;
 }
 // Note: the following is declared `ABSL_ATTRIBUTE_NOINLINE`
-template <int SIZE> LogMessage &LogMessage::operator<<(char (&buf)[SIZE]) {
+template <int SIZE>
+LogMessage& LogMessage::operator<<(char (&buf)[SIZE]) {
   stream_ << buf;
   return *this;
 }
@@ -250,48 +253,48 @@ template <int SIZE> LogMessage &LogMessage::operator<<(char (&buf)[SIZE]) {
 // We instantiate these specializations in the library's TU to save space in
 // other TUs. Since the template is marked `ABSL_ATTRIBUTE_NOINLINE` we will be
 // emitting a function call either way.
-extern template LogMessage &LogMessage::operator<<(const char &v);
-extern template LogMessage &LogMessage::operator<<(const signed char &v);
-extern template LogMessage &LogMessage::operator<<(const unsigned char &v);
-extern template LogMessage &LogMessage::operator<<(const short &v); // NOLINT
-extern template LogMessage &
-LogMessage::operator<<(const unsigned short &v); // NOLINT
-extern template LogMessage &LogMessage::operator<<(const int &v);
-extern template LogMessage &LogMessage::operator<<(const unsigned int &v);
-extern template LogMessage &LogMessage::operator<<(const long &v); // NOLINT
-extern template LogMessage &
-LogMessage::operator<<(const unsigned long &v); // NOLINT
-extern template LogMessage &
-LogMessage::operator<<(const long long &v); // NOLINT
-extern template LogMessage &
-LogMessage::operator<<(const unsigned long long &v); // NOLINT
-extern template LogMessage &LogMessage::operator<<(void *const &v);
-extern template LogMessage &LogMessage::operator<<(const void *const &v);
-extern template LogMessage &LogMessage::operator<<(const float &v);
-extern template LogMessage &LogMessage::operator<<(const double &v);
-extern template LogMessage &LogMessage::operator<<(const bool &v);
-extern template LogMessage &LogMessage::operator<<(const std::string &v);
-extern template LogMessage &LogMessage::operator<<(const absl::string_view &v);
+extern template LogMessage& LogMessage::operator<<(const char& v);
+extern template LogMessage& LogMessage::operator<<(const signed char& v);
+extern template LogMessage& LogMessage::operator<<(const unsigned char& v);
+extern template LogMessage& LogMessage::operator<<(const short& v);  // NOLINT
+extern template LogMessage& LogMessage::operator<<(
+    const unsigned short& v);  // NOLINT
+extern template LogMessage& LogMessage::operator<<(const int& v);
+extern template LogMessage& LogMessage::operator<<(const unsigned int& v);
+extern template LogMessage& LogMessage::operator<<(const long& v);  // NOLINT
+extern template LogMessage& LogMessage::operator<<(
+    const unsigned long& v);  // NOLINT
+extern template LogMessage& LogMessage::operator<<(
+    const long long& v);  // NOLINT
+extern template LogMessage& LogMessage::operator<<(
+    const unsigned long long& v);  // NOLINT
+extern template LogMessage& LogMessage::operator<<(void* const& v);
+extern template LogMessage& LogMessage::operator<<(const void* const& v);
+extern template LogMessage& LogMessage::operator<<(const float& v);
+extern template LogMessage& LogMessage::operator<<(const double& v);
+extern template LogMessage& LogMessage::operator<<(const bool& v);
+extern template LogMessage& LogMessage::operator<<(const std::string& v);
+extern template LogMessage& LogMessage::operator<<(const absl::string_view& v);
 
 // `LogMessageFatal` ensures the process will exit in failure after logging this
 // message.
 class LogMessageFatal : public LogMessage {
-public:
-  LogMessageFatal(const char *file, int line) ABSL_ATTRIBUTE_COLD;
-  LogMessageFatal(const char *file, int line,
+ public:
+  LogMessageFatal(const char* file, int line) ABSL_ATTRIBUTE_COLD;
+  LogMessageFatal(const char* file, int line,
                   absl::string_view failure_msg) ABSL_ATTRIBUTE_COLD;
   ABSL_ATTRIBUTE_NORETURN ~LogMessageFatal();
 };
 
 class LogMessageQuietlyFatal : public LogMessage {
-public:
-  LogMessageQuietlyFatal(const char *file, int line) ABSL_ATTRIBUTE_COLD;
-  LogMessageQuietlyFatal(const char *file, int line,
+ public:
+  LogMessageQuietlyFatal(const char* file, int line) ABSL_ATTRIBUTE_COLD;
+  LogMessageQuietlyFatal(const char* file, int line,
                          absl::string_view failure_msg) ABSL_ATTRIBUTE_COLD;
   ABSL_ATTRIBUTE_NORETURN ~LogMessageQuietlyFatal();
 };
 
-} // namespace logging_internal
-} // namespace rdss
+}  // namespace logging_internal
+}  // namespace rdss
 
-#endif // RDSS_LOGGING_LOG_MESSAGE_H_
+#endif  // RDSS_LOGGING_LOG_MESSAGE_H_

@@ -69,13 +69,13 @@ ABSL_DECLARE_FLAG(std::string, vmodule);
 // list. This list is mutated through calls to SetVLOGLevel() and
 // mutations to the --vmodule flag. New log sites are initialized
 // with a stale epoch and a verbosity level of kUseFlag.
-#define RDSS_VLOG_IS_ON(verbose_level)                                         \
-  (::rdss::logging_internal::VLogEnabled(                                      \
-      []() -> std::atomic<int32_t> * {                                         \
-        static std::atomic<int32_t> site__(                                    \
-            ::rdss::logging_internal::kDefaultSite);                           \
-        return &site__;                                                        \
-      }(),                                                                     \
+#define RDSS_VLOG_IS_ON(verbose_level)               \
+  (::rdss::logging_internal::VLogEnabled(            \
+      []() -> std::atomic<int32_t>* {                \
+        static std::atomic<int32_t> site__(          \
+            ::rdss::logging_internal::kDefaultSite); \
+        return &site__;                              \
+      }(),                                           \
       (verbose_level), __FILE__))
 
 namespace rdss {
@@ -122,10 +122,10 @@ inline int SiteLevel(int32_t site) { return site >> 16; }
 // or fails.
 //   site: The address of the log site's state.
 //   fname: The filename of the current source file.
-int InitVLOG(std::atomic<int32_t> *site, absl::string_view full_path);
+int InitVLOG(std::atomic<int32_t>* site, absl::string_view full_path);
 
 // Slow path version of VLogEnabled.
-bool VLogEnabledSlow(std::atomic<int32_t> *site, int32_t level,
+bool VLogEnabledSlow(std::atomic<int32_t>* site, int32_t level,
                      absl::string_view file);
 
 // Determine whether verbose logging should occur at a given log site. Fast path
@@ -137,7 +137,7 @@ bool VLogEnabledSlow(std::atomic<int32_t> *site, int32_t level,
 #if defined(__GNUC__) && !defined(__clang__)
 ABSL_ATTRIBUTE_ALWAYS_INLINE
 #endif
-inline bool VLogEnabled(std::atomic<int32_t> *site, int32_t level,
+inline bool VLogEnabled(std::atomic<int32_t>* site, int32_t level,
                         absl::string_view file) {
   const int32_t site_copy = site->load(std::memory_order_acquire);
   if (ABSL_PREDICT_TRUE(SiteEpoch(site_copy) == GlobalEpoch())) {
@@ -153,7 +153,7 @@ inline bool VLogEnabled(std::atomic<int32_t> *site, int32_t level,
   return VLogEnabledSlow(site, level, file);
 }
 
-} // namespace logging_internal
+}  // namespace logging_internal
 
 // Represents a unique callsite for a `RDSS_VLOG()` or `RDSS_VLOG_IS_ON()` call.
 // Helper libraries that provide vlog like functionality should use this to
@@ -163,15 +163,15 @@ inline bool VLogEnabled(std::atomic<int32_t> *site, int32_t level,
 // that in the class would increase the size, so the consistency invariant is
 // pushed onto callers of `IsEnabled()`.
 class VLogSite {
-public:
+ public:
   constexpr VLogSite() {}
 
   // Since this is a caching location, copying it doesn't make sense. The copy
   // should get a brand new kDefaultSite.
-  VLogSite(const VLogSite &) = delete;
-  VLogSite &operator=(const VLogSite &) = delete;
-  VLogSite(VLogSite &&) = delete;
-  VLogSite &operator=(VLogSite &&) = delete;
+  VLogSite(const VLogSite&) = delete;
+  VLogSite& operator=(const VLogSite&) = delete;
+  VLogSite(VLogSite&&) = delete;
+  VLogSite& operator=(VLogSite&&) = delete;
 
   // Returns true if logging is enabled. Like RDSS_VLOG_IS_ON(2), this uses
   // internal atomics to be fast in the common case. For any given instance of
@@ -180,16 +180,16 @@ public:
     return logging_internal::VLogEnabled(&site_, level, file);
   }
 
-private:
+ private:
   mutable std::atomic<int32_t> site_{logging_internal::kDefaultSite};
 };
 
-} // namespace rdss
+}  // namespace rdss
 
 namespace base_logging {
 namespace logging_internal {
 bool SafeFNMatch(absl::string_view pattern, absl::string_view str);
-} // namespace logging_internal
-} // namespace base_logging
+}  // namespace logging_internal
+}  // namespace base_logging
 
-#endif // RDSS_LOGGING_VLOG_IS_ON_H_
+#endif  // RDSS_LOGGING_VLOG_IS_ON_H_

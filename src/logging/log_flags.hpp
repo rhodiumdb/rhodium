@@ -21,4 +21,4 @@
 
 #include "log_flags.inc"
 
-#endif // RDSS_LOGGING_LOG_FLAGS_H_
+#endif  // RDSS_LOGGING_LOG_FLAGS_H_

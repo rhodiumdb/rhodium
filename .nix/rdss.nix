@@ -1,4 +1,4 @@
-{ stdenv, lib, cmake, clang-tools
+{ stdenv, lib, cmake
 , abseil-cpp, gtest, z3, highway, rapidcheck
 }:
 
@@ -13,5 +13,5 @@ stdenv.mkDerivation {
 
   buildInputs = [ abseil-cpp gtest highway rapidcheck z3 ];
 
-  nativeBuildInputs = [ cmake clang-tools ];
+  nativeBuildInputs = [ cmake ];
 }

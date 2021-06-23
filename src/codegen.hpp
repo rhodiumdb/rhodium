@@ -24,302 +24,337 @@
 namespace rdss {
 
 struct RelationCode {
-  int32_t member;
-  int32_t insertion_method;
-  int32_t deletion_method;
+    int32_t member;
+    int32_t insertion_method;
+    int32_t deletion_method;
 };
 
 namespace {
 
-template <typename T>
-std::vector<T> &operator+=(std::vector<T> &a, const std::vector<T> &b) {
-  a.insert(a.end(), b.begin(), b.end());
-  return a;
+template<typename T>
+std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b) {
+    a.insert(a.end(), b.begin(), b.end());
+    return a;
 }
 
-} // namespace
+}  // namespace
 
-std::vector<Attr> LHSIndices(const JoinOn &join_on) {
-  std::vector<Attr> result;
-  for (auto [i, j] : join_on) {
-    result.push_back(i);
-  }
-  return result;
+std::vector<Attr> LHSIndices(const JoinOn& join_on) {
+    std::vector<Attr> result;
+    for (auto [i, j] : join_on) {
+        result.push_back(i);
+    }
+    return result;
 }
 
-std::vector<Attr> RHSIndices(const JoinOn &join_on) {
-  std::vector<Attr> result;
-  for (auto [i, j] : join_on) {
-    result.push_back(j);
-  }
-  return result;
+std::vector<Attr> RHSIndices(const JoinOn& join_on) {
+    std::vector<Attr> result;
+    for (auto [i, j] : join_on) {
+        result.push_back(j);
+    }
+    return result;
 }
 
-using TypingContext = absl::btree_map<Relation *, Type *>;
+using TypingContext = absl::btree_map<Relation*, Type*>;
 
 struct Codegen {
-  Codegen(absl::string_view name, FreshVariableSource *source_,
-          const TypingContext &typing_context_)
-      : table_relations(), view_relations(), ds(std::string(name)),
-        source(source_), typing_context(typing_context_) {}
+    Codegen(absl::string_view name,
+            FreshVariableSource* source_,
+            const TypingContext& typing_context_)
+        : table_relations()
+        , view_relations()
+        , ds(std::string(name))
+        , source(source_)
+        , typing_context(typing_context_) {}
 
-  absl::btree_map<std::string, RelationCode> table_relations;
-  absl::btree_map<Relation *, RelationCode> view_relations;
-  DataStructure ds;
-  FreshVariableSource *source;
-  TypingContext typing_context;
+    absl::btree_map<std::string, RelationCode> table_relations;
+    absl::btree_map<Relation*, RelationCode> view_relations;
+    DataStructure ds;
+    FreshVariableSource* source;
+    TypingContext typing_context;
 
-  Member *MemberOfTable(absl::string_view name) {
-    return &ds.members.at(table_relations.at(name).member);
-  }
-
-  Member *MemberOfView(Relation *rel) {
-    return &ds.members.at(view_relations.at(rel).member);
-  }
-
-  Method *InsertionOfTable(absl::string_view name) {
-    return &ds.methods.at(table_relations.at(name).insertion_method);
-  }
-
-  Method *InsertionOfView(Relation *rel) {
-    return &ds.methods.at(view_relations.at(rel).insertion_method);
-  }
-
-  Method *DeletionOfTable(absl::string_view name) {
-    return &ds.methods.at(table_relations.at(name).deletion_method);
-  }
-
-  Method *DeletionOfView(Relation *rel) {
-    return &ds.methods.at(view_relations.at(rel).deletion_method);
-  }
-
-  RelationCode SimpleRelationCode(absl::string_view name, Type *type) {
-    RelationCode rel_code;
-
-    {
-      int32_t member = ds.members.size();
-      ds.members.push_back(Member{VarName(name), new TypeHashSet(type)});
-      rel_code.member = member;
+    Member* MemberOfTable(absl::string_view name) {
+        return &ds.members.at(table_relations.at(name).member);
     }
 
-    {
-      int32_t insertion_method = ds.methods.size();
-      ds.methods.push_back(Method(VarName(absl::StrCat(name, "_insert"))));
-      ds.methods.back().arguments.push_back({VarName("tuple"), type});
-      ds.methods.back().body.push_back(
-          new ActionInsertHashSet(VarName(name), VarName("tuple")));
-      rel_code.insertion_method = insertion_method;
+    Member* MemberOfView(Relation* rel) {
+        return &ds.members.at(view_relations.at(rel).member);
     }
 
-    {
-      int32_t deletion_method = ds.methods.size();
-      ds.methods.push_back(Method(VarName(absl::StrCat(name, "_delete"))));
-      ds.methods.back().arguments.push_back({VarName("tuple"), type});
-      ds.methods.back().body.push_back(
-          new ActionDeleteHashSet(VarName(name), VarName("tuple")));
-      rel_code.deletion_method = deletion_method;
+    Method* InsertionOfTable(absl::string_view name) {
+        return &ds.methods.at(table_relations.at(name).insertion_method);
     }
 
-    return rel_code;
-  }
-
-  std::pair<std::vector<Action *>, Type *>
-  FilterTuple(VarName output, std::pair<VarName, Type *> tuple,
-              absl::Span<int32_t const> element_indices) {
-    std::vector<Action *> result;
-    std::vector<Type *> type_vector;
-    std::vector<std::pair<VarName, Type *>> restricted_elements;
-    for (int32_t i : element_indices) {
-      VarName elem = source->Fresh();
-      result.push_back(new ActionIndexRow(elem, tuple.first, i));
-      Type *type =
-          DynamicCast<Type, TypeRow>(tuple.second).value()->elements.at(i);
-      type_vector.push_back(type);
-      restricted_elements.push_back({elem, type});
-    }
-    result.push_back(new ActionCreateRow(output, restricted_elements));
-    return {result, new TypeRow(type_vector)};
-  }
-
-  absl::Status Run(Relation *rel) {
-    if (view_relations.contains(rel)) {
-      return absl::OkStatus();
+    Method* InsertionOfView(Relation* rel) {
+        return &ds.methods.at(view_relations.at(rel).insertion_method);
     }
 
-    if (auto r = DynamicCast<Relation, RelationReference>(rel)) {
-      std::string name = r.value()->name;
-      Type *type = typing_context.at(rel);
+    Method* DeletionOfTable(absl::string_view name) {
+        return &ds.methods.at(table_relations.at(name).deletion_method);
+    }
 
-      if (table_relations.contains(name)) {
-        view_relations[rel] = table_relations.at(name);
-        return absl::OkStatus();
-      }
+    Method* DeletionOfView(Relation* rel) {
+        return &ds.methods.at(view_relations.at(rel).deletion_method);
+    }
 
-      RelationCode rel_code = SimpleRelationCode(name, type);
+    RelationCode SimpleRelationCode(absl::string_view name,
+                                    Type* type) {
+        RelationCode rel_code;
 
-      table_relations[name] = rel_code;
-      view_relations[rel] = rel_code;
-    } else if (auto r = DynamicCast<Relation, RelationJoin>(rel)) {
-      // FIXME: implement this case
-    } else if (auto r = DynamicCast<Relation, RelationSemijoin>(rel)) {
-      VarName rel_name = source->Fresh();
-      Type *rel_type = typing_context.at(rel);
-
-      view_relations[rel] = SimpleRelationCode(rel_name.name, rel_type);
-
-      auto lhs = r.value()->lhs;
-      auto rhs = r.value()->rhs;
-      auto join_on = r.value()->attributes;
-
-      RETURN_IF_ERROR(this->Run(lhs));
-      RETURN_IF_ERROR(this->Run(rhs));
-
-      {
-        VarName restricted_lhs = source->Fresh();
-
-        InsertionOfView(lhs)->body +=
-            FilterTuple(restricted_lhs,
-                        {VarName("tuple"), typing_context.at(lhs)},
-                        LHSIndices(join_on))
-                .first;
-
-        InsertionOfView(lhs)->body.push_back(new ActionIterateOverHashSet{
-            MemberOfView(rhs)->name,
-            [=, this](VarName tuple) -> std::vector<Action *> {
-              std::vector<Action *> result;
-
-              VarName restricted_rhs = source->Fresh();
-
-              result +=
-                  FilterTuple(restricted_rhs, {tuple, typing_context.at(rhs)},
-                              RHSIndices(join_on))
-                      .first;
-
-              result.push_back(new ActionIfEquals(
-                  {{restricted_lhs, restricted_rhs}},
-                  {new ActionInvoke(InsertionOfView(rel)->name,
-                                    {VarName("tuple")})}));
-              return result;
-            }});
-      }
-
-      {
-        VarName restricted_rhs = source->Fresh();
-
-        InsertionOfView(rhs)->body +=
-            FilterTuple(restricted_rhs,
-                        {VarName("tuple"), typing_context.at(rhs)},
-                        RHSIndices(join_on))
-                .first;
-
-        InsertionOfView(rhs)->body.push_back(new ActionIterateOverHashSet{
-            MemberOfView(lhs)->name,
-            [=, this](VarName tuple) -> std::vector<Action *> {
-              std::vector<Action *> result;
-
-              VarName restricted_lhs = source->Fresh();
-
-              result +=
-                  FilterTuple(restricted_lhs, {tuple, typing_context.at(lhs)},
-                              LHSIndices(join_on))
-                      .first;
-
-              result.push_back(new ActionIfEquals(
-                  {{restricted_lhs, restricted_rhs}},
-                  {new ActionInvoke(InsertionOfView(rel)->name, {tuple})}));
-              return result;
-            }});
-      }
-
-      // FIXME: implement deletion for semijoins
-    } else if (auto r = DynamicCast<Relation, RelationUnion>(rel)) {
-      view_relations[rel] =
-          SimpleRelationCode(source->Fresh().name, typing_context.at(rel));
-
-      auto lhs = r.value()->lhs;
-      auto rhs = r.value()->rhs;
-
-      RETURN_IF_ERROR(this->Run(lhs));
-      RETURN_IF_ERROR(this->Run(rhs));
-
-      InsertionOfView(lhs)->body.push_back(
-          new ActionInvoke(InsertionOfView(rel)->name, {VarName("tuple")}));
-
-      InsertionOfView(rhs)->body.push_back(
-          new ActionInvoke(InsertionOfView(rel)->name, {VarName("tuple")}));
-
-      // FIXME: implement deletions
-    } else if (auto r = DynamicCast<Relation, RelationDifference>(rel)) {
-      view_relations[rel] =
-          SimpleRelationCode(source->Fresh().name, typing_context.at(rel));
-
-      auto lhs = r.value()->lhs;
-      auto rhs = r.value()->rhs;
-
-      RETURN_IF_ERROR(this->Run(lhs));
-      RETURN_IF_ERROR(this->Run(rhs));
-
-      InsertionOfView(lhs)->body.push_back(
-          new ActionInvoke(InsertionOfView(rel)->name, {VarName("tuple")}));
-
-      InsertionOfView(rhs)->body.push_back(
-          new ActionInvoke(DeletionOfView(rel)->name, {VarName("tuple")}));
-
-      DeletionOfView(lhs)->body.push_back(
-          new ActionInvoke(DeletionOfView(rel)->name, {VarName("tuple")}));
-
-      auto contains_var = source->Fresh();
-      auto true_var = source->Fresh();
-      DeletionOfView(rhs)->body +=
-          {new ActionContainsHashSet(contains_var, MemberOfView(lhs)->name,
-                                     {VarName("tuple")}),
-           new ActionAssignConstant(true_var, "true"),
-           new ActionIfEquals({{contains_var, true_var}},
-                              {new ActionInvoke(InsertionOfView(rel)->name,
-                                                {VarName("tuple")})})};
-    } else if (auto r = DynamicCast<Relation, RelationSelect>(rel)) {
-      // FIXME: implement this case
-    } else if (auto r = DynamicCast<Relation, RelationMap>(rel)) {
-      // FIXME: implement this case
-    } else if (auto r = DynamicCast<Relation, RelationView>(rel)) {
-      view_relations[rel] =
-          SimpleRelationCode(source->Fresh().name, typing_context.at(rel));
-
-      auto perm = r.value()->rel.perm;
-      auto underlying = r.value()->rel.rel;
-
-      RETURN_IF_ERROR(this->Run(underlying));
-
-      std::vector<std::pair<VarName, Type *>> viewed_elements;
-      viewed_elements.resize(r.value()->rel.Arity(), {VarName(""), nullptr});
-      int32_t i = 0;
-      for (std::optional<Attr> attr_maybe : perm) {
-        if (attr_maybe.has_value()) {
-          VarName elem = source->Fresh();
-          InsertionOfView(underlying)
-              ->body.push_back(new ActionIndexRow(elem, VarName("tuple"), i));
-          Type *type = DynamicCast<Type, TypeRow>(typing_context.at(underlying))
-                           .value()
-                           ->elements.at(i);
-          viewed_elements.at(attr_maybe.value()) = {elem, type};
+        {
+            int32_t member = ds.members.size();
+            ds.members.push_back(
+                Member { VarName(name), new TypeHashSet(type) });
+            rel_code.member = member;
         }
-        i++;
-      }
-      VarName output = source->Fresh();
-      InsertionOfView(underlying)->body +=
-          {new ActionCreateRow(output, viewed_elements),
-           new ActionInvoke(InsertionOfView(rel)->name, {output})};
 
-      // FIXME: implement deletions for views
-    } else {
-      return absl::InternalError(
-          "If this is reached, a new relation op has been added but no "
-          "case was added to the codegen. Please add one.");
+        {
+            int32_t insertion_method = ds.methods.size();
+            ds.methods.push_back(
+                Method(VarName(absl::StrCat(name, "_insert"))));
+            ds.methods.back().arguments.push_back(
+                { VarName("tuple"), type });
+            ds.methods.back().body.push_back(
+                new ActionInsertHashSet(VarName(name), VarName("tuple")));
+            rel_code.insertion_method = insertion_method;
+        }
+
+        {
+            int32_t deletion_method = ds.methods.size();
+            ds.methods.push_back(
+                Method(VarName(absl::StrCat(name, "_delete"))));
+            ds.methods.back().arguments.push_back(
+                { VarName("tuple"), type });
+            ds.methods.back().body.push_back(
+                new ActionDeleteHashSet(VarName(name), VarName("tuple")));
+            rel_code.deletion_method = deletion_method;
+        }
+
+        return rel_code;
     }
-    return absl::OkStatus();
-  }
+
+    std::pair<std::vector<Action*>, Type*>
+    FilterTuple(VarName output,
+                std::pair<VarName, Type*> tuple,
+                absl::Span<int32_t const> element_indices) {
+        std::vector<Action*> result;
+        std::vector<Type*> type_vector;
+        std::vector<std::pair<VarName, Type*>> restricted_elements;
+        for (int32_t i : element_indices) {
+            VarName elem = source->Fresh();
+            result.push_back(new ActionIndexRow(elem, tuple.first, i));
+            Type* type =
+                DynamicCast<Type, TypeRow>(tuple.second)
+                .value()->elements.at(i);
+            type_vector.push_back(type);
+            restricted_elements.push_back({elem, type});
+        }
+        result.push_back(new ActionCreateRow(output, restricted_elements));
+        return {result, new TypeRow(type_vector)};
+    }
+
+    absl::Status Run(Relation* rel) {
+        if (view_relations.contains(rel)) {
+            return absl::OkStatus();
+        }
+
+        if (auto r = DynamicCast<Relation, RelationReference>(rel)) {
+            std::string name = r.value()->name;
+            Type* type = typing_context.at(rel);
+
+            if (table_relations.contains(name)) {
+                view_relations[rel] = table_relations.at(name);
+                return absl::OkStatus();
+            }
+
+            RelationCode rel_code = SimpleRelationCode(name, type);
+
+            table_relations[name] = rel_code;
+            view_relations[rel] = rel_code;
+        } else if (auto r = DynamicCast<Relation, RelationJoin>(rel)) {
+            // FIXME: implement this case
+        } else if (auto r = DynamicCast<Relation, RelationSemijoin>(rel)) {
+            VarName rel_name = source->Fresh();
+            Type* rel_type = typing_context.at(rel);
+
+            view_relations[rel] = SimpleRelationCode(rel_name.name, rel_type);
+
+            auto lhs = r.value()->lhs;
+            auto rhs = r.value()->rhs;
+            auto join_on = r.value()->attributes;
+
+            RETURN_IF_ERROR(this->Run(lhs));
+            RETURN_IF_ERROR(this->Run(rhs));
+
+            {
+                VarName restricted_lhs = source->Fresh();
+
+                InsertionOfView(lhs)->body +=
+                    FilterTuple(restricted_lhs,
+                                {VarName("tuple"), typing_context.at(lhs)},
+                                LHSIndices(join_on)).first;
+
+                InsertionOfView(lhs)->body.push_back(
+                    new ActionIterateOverHashSet {
+                        MemberOfView(rhs)->name,
+                        [=, this](VarName tuple) -> std::vector<Action*> {
+                            std::vector<Action*> result;
+
+                            VarName restricted_rhs = source->Fresh();
+
+                            result +=
+                                FilterTuple(restricted_rhs,
+                                            {tuple, typing_context.at(rhs)},
+                                            RHSIndices(join_on)).first;
+
+                            result.push_back(
+                                new ActionIfEquals(
+                                    {{restricted_lhs, restricted_rhs}},
+                                    {
+                                        new ActionInvoke(
+                                            InsertionOfView(rel)->name,
+                                            {VarName("tuple")})
+                                    }));
+                            return result;
+                        }
+                    });
+            }
+
+            {
+                VarName restricted_rhs = source->Fresh();
+
+                InsertionOfView(rhs)->body +=
+                    FilterTuple(restricted_rhs,
+                                {VarName("tuple"), typing_context.at(rhs)},
+                                RHSIndices(join_on)).first;
+
+                InsertionOfView(rhs)->body.push_back(
+                    new ActionIterateOverHashSet {
+                        MemberOfView(lhs)->name,
+                        [=, this](VarName tuple) -> std::vector<Action*> {
+                            std::vector<Action*> result;
+
+                            VarName restricted_lhs = source->Fresh();
+
+                            result +=
+                                FilterTuple(restricted_lhs,
+                                            {tuple, typing_context.at(lhs)},
+                                            LHSIndices(join_on)).first;
+
+                            result.push_back(
+                                new ActionIfEquals(
+                                    {{restricted_lhs, restricted_rhs}},
+                                    {
+                                        new ActionInvoke(
+                                            InsertionOfView(rel)->name,
+                                            {tuple})
+                                    }));
+                            return result;
+                        }
+                    });
+            }
+
+            // FIXME: implement deletion for semijoins
+        } else if (auto r = DynamicCast<Relation, RelationUnion>(rel)) {
+            view_relations[rel] =
+                SimpleRelationCode(source->Fresh().name,
+                                   typing_context.at(rel));
+
+            auto lhs = r.value()->lhs;
+            auto rhs = r.value()->rhs;
+
+            RETURN_IF_ERROR(this->Run(lhs));
+            RETURN_IF_ERROR(this->Run(rhs));
+
+            InsertionOfView(lhs)->body.push_back(
+                new ActionInvoke(InsertionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            InsertionOfView(rhs)->body.push_back(
+                new ActionInvoke(InsertionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            // FIXME: implement deletions
+        } else if (auto r = DynamicCast<Relation, RelationDifference>(rel)) {
+            view_relations[rel] =
+                SimpleRelationCode(source->Fresh().name,
+                                   typing_context.at(rel));
+
+            auto lhs = r.value()->lhs;
+            auto rhs = r.value()->rhs;
+
+            RETURN_IF_ERROR(this->Run(lhs));
+            RETURN_IF_ERROR(this->Run(rhs));
+
+            InsertionOfView(lhs)->body.push_back(
+                new ActionInvoke(InsertionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            InsertionOfView(rhs)->body.push_back(
+                new ActionInvoke(DeletionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            DeletionOfView(lhs)->body.push_back(
+                new ActionInvoke(DeletionOfView(rel)->name,
+                                 {VarName("tuple")}));
+
+            auto contains_var = source->Fresh();
+            auto true_var = source->Fresh();
+            DeletionOfView(rhs)->body += {
+                new ActionContainsHashSet(contains_var,
+                                          MemberOfView(lhs)->name,
+                                          {VarName("tuple")}),
+                new ActionAssignConstant(true_var, "true"),
+                new ActionIfEquals({{contains_var, true_var}},
+                                   {new ActionInvoke(InsertionOfView(rel)->name,
+                                                     {VarName("tuple")})})
+            };
+        } else if (auto r = DynamicCast<Relation, RelationSelect>(rel)) {
+            // FIXME: implement this case
+        } else if (auto r = DynamicCast<Relation, RelationMap>(rel)) {
+            // FIXME: implement this case
+        } else if (auto r = DynamicCast<Relation, RelationView>(rel)) {
+            view_relations[rel] =
+                SimpleRelationCode(source->Fresh().name,
+                                   typing_context.at(rel));
+
+            auto perm = r.value()->rel.perm;
+            auto underlying = r.value()->rel.rel;
+
+            RETURN_IF_ERROR(this->Run(underlying));
+
+            std::vector<std::pair<VarName, Type*>> viewed_elements;
+            viewed_elements.resize(r.value()->rel.Arity(),
+                                   {VarName(""), nullptr});
+            int32_t i = 0;
+            for (std::optional<Attr> attr_maybe : perm) {
+                if (attr_maybe.has_value()) {
+                    VarName elem = source->Fresh();
+                    InsertionOfView(underlying)->body.push_back(
+                        new ActionIndexRow(elem, VarName("tuple"), i));
+                    Type* type =
+                        DynamicCast<Type, TypeRow>(typing_context.at(underlying))
+                        .value()->elements.at(i);
+                    viewed_elements.at(attr_maybe.value()) = {elem, type};
+                }
+                i++;
+            }
+            VarName output = source->Fresh();
+            InsertionOfView(underlying)->body += {
+                new ActionCreateRow(output, viewed_elements),
+                new ActionInvoke(InsertionOfView(rel)->name, {output})
+            };
+
+            // FIXME: implement deletions for views
+        } else {
+            return absl::InternalError(
+                "If this is reached, a new relation op has been added but no "
+                "case was added to the codegen. Please add one.");
+        }
+        return absl::OkStatus();
+    }
 };
 
-} // namespace rdss
+}  // namespace rdss
 
-#endif // RDSS_CODEGEN_H_
+#endif  // RDSS_CODEGEN_H_

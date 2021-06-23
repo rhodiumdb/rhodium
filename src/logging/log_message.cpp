@@ -27,9 +27,9 @@
 #include <absl/time/time.h>
 #include <absl/types/span.h>
 
+#include "log_message.hpp"
 #include "log_entry.hpp"
 #include "log_flags.hpp"
-#include "log_message.hpp"
 #include "strerror.hpp"
 #include "symbolized_stacktrace.hpp"
 
@@ -39,23 +39,21 @@ namespace {
 
 // `global_sinks` holds globally registered `LogSink`s.
 ABSL_CONST_INIT absl::Mutex global_sinks_mutex(absl::kConstInit);
-ABSL_CONST_INIT std::vector<LogSink *> *
-    global_sinks ABSL_GUARDED_BY(global_sinks_mutex)
-        ABSL_PT_GUARDED_BY(global_sinks_mutex) = nullptr;
+ABSL_CONST_INIT std::vector<LogSink*>* global_sinks ABSL_GUARDED_BY(
+    global_sinks_mutex) ABSL_PT_GUARDED_BY(global_sinks_mutex) = nullptr;
 
 // `sink_send_mutex` protects against concurrent calls from the logging library
 // to any `LogSink::Send()`.
-ABSL_CONST_INIT absl::Mutex
-    sink_send_mutex ABSL_ACQUIRED_AFTER(global_sinks_mutex)(absl::kConstInit);
+ABSL_CONST_INIT absl::Mutex sink_send_mutex
+    ABSL_ACQUIRED_AFTER(global_sinks_mutex)(absl::kConstInit);
 
 // Have we already seen a fatal message?
 std::atomic_flag seen_fatal = ATOMIC_FLAG_INIT;
 
 // Copies into `dst` as many bytes of `src` as will fit, then truncates the
 // copied bytes from the front of `dst` and returns the number of bytes written.
-size_t AppendTruncated(absl::string_view src, absl::Span<char> *dst) {
-  if (src.size() > dst->size())
-    src = src.substr(0, dst->size());
+size_t AppendTruncated(absl::string_view src, absl::Span<char>* dst) {
+  if (src.size() > dst->size()) src = src.substr(0, dst->size());
   memcpy(dst->data(), src.data(), src.size());
   dst->remove_prefix(src.size());
   return src.size();
@@ -68,20 +66,20 @@ ABSL_CONST_INIT std::array<char, 512> fatal_message{{0}};
 
 // A write-only `std::streambuf` that writes into an `absl::Span<char>`.
 class SpanStreambuf : public std::streambuf {
-public:
+ public:
   explicit SpanStreambuf(absl::Span<char> buf) {
     setp(buf.data(), buf.data() + buf.size());
   }
 
-  SpanStreambuf(SpanStreambuf &&) = default;
-  SpanStreambuf &operator=(SpanStreambuf &&) = default;
+  SpanStreambuf(SpanStreambuf&&) = default;
+  SpanStreambuf& operator=(SpanStreambuf&&) = default;
 
   absl::string_view data() const {
     return absl::string_view(pbase(), pptr() - pbase());
   }
 
-protected:
-  std::streamsize xsputn(const char *s, std::streamsize n) override {
+ protected:
+  std::streamsize xsputn(const char* s, std::streamsize n) override {
     n = std::min<std::streamsize>(n, epptr() - pptr());
     memcpy(pptr(), s, n);
     pbump(n);
@@ -91,18 +89,18 @@ protected:
 
 // Returns a mutable reference to a thread-local variable that should be true if
 // a `LogSink::Send()` is currently being invoked on this thread.
-inline bool &ThreadIsLogging() {
+inline bool& ThreadIsLogging() {
   static thread_local bool thread_is_logging = false;
   return thread_is_logging;
 }
 
-} // namespace
+}  // namespace
 
 struct LogMessage::LogMessageData {
-  LogMessageData(const char *file, int line, absl::LogSeverity severity,
+  LogMessageData(const char* file, int line, absl::LogSeverity severity,
                  absl::Time timestamp);
-  LogMessageData(const LogMessageData &) = delete;
-  LogMessageData &operator=(const LogMessageData &) = delete;
+  LogMessageData(const LogMessageData&) = delete;
+  LogMessageData& operator=(const LogMessageData&) = delete;
 
   // `LogEntry` sent to `LogSink`s; contains metadata.
   LogEntry entry;
@@ -117,7 +115,7 @@ struct LogMessage::LogMessageData {
   bool is_perror;
 
   // Extra `LogSink`s to log to, in addition to `global_sinks`.
-  absl::InlinedVector<LogSink *, 16> extra_sinks;
+  absl::InlinedVector<LogSink*, 16> extra_sinks;
   // If true, log to `extra_sinks` but not to `global_sinks` or hardcoded
   // non-sink targets (e.g. stderr, log files).
   bool extra_sinks_only;
@@ -139,13 +137,14 @@ struct LogMessage::LogMessageData {
   SpanStreambuf streambuf;
 };
 
-LogMessage::LogMessageData::LogMessageData(const char *file, int line,
+LogMessage::LogMessageData::LogMessageData(const char* file, int line,
                                            absl::LogSeverity severity,
                                            absl::Time timestamp)
-    : entry(file, line, severity, timestamp), extra_sinks_only(false),
+    : entry(file, line, severity, timestamp),
+      extra_sinks_only(false),
       streambuf(absl::MakeSpan(string_buf)) {}
 
-LogMessage::LogMessage(const char *file, int line, absl::LogSeverity severity)
+LogMessage::LogMessage(const char* file, int line, absl::LogSeverity severity)
     : data_(
           absl::make_unique<LogMessageData>(file, line, severity, absl::Now())),
       stream_(&data_->streambuf) {
@@ -174,29 +173,29 @@ LogMessage::LogMessage(const char *file, int line, absl::LogSeverity severity)
 
 LogMessage::~LogMessage() { Flush(); }
 
-LogMessage &LogMessage::WithCheckFailureMessage(absl::string_view msg) {
+LogMessage& LogMessage::WithCheckFailureMessage(absl::string_view msg) {
   stream() << "Check failed: " << msg << " ";
   return *this;
 }
 
-LogMessage &LogMessage::AtLocation(absl::string_view file, int line) {
+LogMessage& LogMessage::AtLocation(absl::string_view file, int line) {
   data_->entry.set_source_filename(file);
   data_->entry.set_source_line(line);
   LogBacktraceIfNeeded();
   return *this;
 }
 
-LogMessage &LogMessage::NoPrefix() {
+LogMessage& LogMessage::NoPrefix() {
   data_->entry.set_prefix(false);
   return *this;
 }
 
-LogMessage &LogMessage::WithPerror() {
+LogMessage& LogMessage::WithPerror() {
   data_->is_perror = true;
   return *this;
 }
 
-LogMessage &LogMessage::WithVerbosity(int verbose_level) {
+LogMessage& LogMessage::WithVerbosity(int verbose_level) {
   if (verbose_level == LogEntry::kNoVerboseLevel) {
     data_->entry.set_verbosity(LogEntry::kNoVerboseLevel);
   } else {
@@ -205,14 +204,14 @@ LogMessage &LogMessage::WithVerbosity(int verbose_level) {
   return *this;
 }
 
-LogMessage &LogMessage::ToSinkAlso(LogSink *sink) {
+LogMessage& LogMessage::ToSinkAlso(LogSink* sink) {
   if (sink != nullptr) {
     data_->extra_sinks.push_back(sink);
   }
   return *this;
 }
 
-LogMessage &LogMessage::ToSinkOnly(LogSink *sink) {
+LogMessage& LogMessage::ToSinkOnly(LogSink* sink) {
   data_->extra_sinks.clear();
   if (sink != nullptr) {
     data_->extra_sinks.push_back(sink);
@@ -255,32 +254,30 @@ void LogMessage::Flush() {
 void LogMessage::LogToSinks() const
     ABSL_LOCKS_EXCLUDED(global_sinks_mutex,
                         sink_send_mutex) ABSL_NO_THREAD_SAFETY_ANALYSIS {
-  if (!data_->extra_sinks_only)
-    global_sinks_mutex.ReaderLock();
+  if (!data_->extra_sinks_only) global_sinks_mutex.ReaderLock();
   if (!data_->extra_sinks.empty() ||
       (!data_->extra_sinks_only && global_sinks && !global_sinks->empty())) {
     {
       absl::MutexLock send_sink_lock(&sink_send_mutex);
-      for (LogSink *sink : data_->extra_sinks) {
+      for (LogSink* sink : data_->extra_sinks) {
         sink->Send(data_->entry);
       }
       if (!data_->extra_sinks_only && global_sinks) {
-        for (LogSink *sink : *global_sinks) {
+        for (LogSink* sink : *global_sinks) {
           sink->Send(data_->entry);
         }
       }
     }
-    for (LogSink *sink : data_->extra_sinks) {
+    for (LogSink* sink : data_->extra_sinks) {
       sink->WaitTillSent();
     }
     if (!data_->extra_sinks_only && global_sinks) {
-      for (LogSink *sink : *global_sinks) {
+      for (LogSink* sink : *global_sinks) {
         sink->WaitTillSent();
       }
     }
   }
-  if (!data_->extra_sinks_only)
-    global_sinks_mutex.ReaderUnlock();
+  if (!data_->extra_sinks_only) global_sinks_mutex.ReaderUnlock();
 }
 
 void LogMessage::Fail() {
@@ -341,17 +338,15 @@ size_t HashSiteForLogBacktraceAt(absl::string_view file, int line) {
   using HashTuple = std::tuple<absl::string_view, int>;
   return absl::Hash<HashTuple>()(HashTuple(file, line));
 }
-} // namespace
+}  // namespace
 
 void LogMessage::LogBacktraceIfNeeded() {
   const size_t flag_hash =
       log_backtrace_at_hash.load(std::memory_order_relaxed);
-  if (!flag_hash)
-    return;
+  if (!flag_hash) return;
   const size_t site_hash = HashSiteForLogBacktraceAt(
       data_->entry.source_basename(), data_->entry.source_line());
-  if (site_hash != flag_hash)
-    return;
+  if (site_hash != flag_hash) return;
   stream_ << " (stacktrace:\n";
   stream_ << GetSymbolizedStackTraceAsString(/*max_depth=*/50,
                                              /*skip_count=*/1);
@@ -418,7 +413,7 @@ void LogMessage::SendToLog() {
         data_->entry.source_basename(), ":", data_->entry.source_line(), " ",
         data_->streambuf.data(), "\n");
 
-    if (absl::GetFlag(FLAGS_logtostderr) ||
+      if (absl::GetFlag(FLAGS_logtostderr) ||
         absl::GetFlag(FLAGS_alsologtostderr) ||
         static_cast<int>(data_->entry.log_severity()) >=
             static_cast<int>(absl::GetFlag(FLAGS_stderrthreshold))) {
@@ -432,7 +427,7 @@ void LogMessage::SendToLog() {
       if (data_->entry.log_severity() >= absl::LogSeverity::kWarning) {
         fflush(stderr);
       }
-#endif // _WIN32
+#endif  // _WIN32
     }
   }
   PrepareToDieIfFatal();
@@ -441,29 +436,29 @@ void LogMessage::SendToLog() {
   DieIfFatal();
 }
 
-template LogMessage &LogMessage::operator<<(const char &v);
-template LogMessage &LogMessage::operator<<(const signed char &v);
-template LogMessage &LogMessage::operator<<(const unsigned char &v);
-template LogMessage &LogMessage::operator<<(const short &v);          // NOLINT
-template LogMessage &LogMessage::operator<<(const unsigned short &v); // NOLINT
-template LogMessage &LogMessage::operator<<(const int &v);
-template LogMessage &LogMessage::operator<<(const unsigned int &v);
-template LogMessage &LogMessage::operator<<(const long &v);          // NOLINT
-template LogMessage &LogMessage::operator<<(const unsigned long &v); // NOLINT
-template LogMessage &LogMessage::operator<<(const long long &v);     // NOLINT
-template LogMessage &
-LogMessage::operator<<(const unsigned long long &v); // NOLINT
-template LogMessage &LogMessage::operator<<(void *const &v);
-template LogMessage &LogMessage::operator<<(const void *const &v);
-template LogMessage &LogMessage::operator<<(const float &v);
-template LogMessage &LogMessage::operator<<(const double &v);
-template LogMessage &LogMessage::operator<<(const bool &v);
-template LogMessage &LogMessage::operator<<(const std::string &v);
-template LogMessage &LogMessage::operator<<(const absl::string_view &v);
-LogMessageFatal::LogMessageFatal(const char *file, int line)
+template LogMessage& LogMessage::operator<<(const char& v);
+template LogMessage& LogMessage::operator<<(const signed char& v);
+template LogMessage& LogMessage::operator<<(const unsigned char& v);
+template LogMessage& LogMessage::operator<<(const short& v);           // NOLINT
+template LogMessage& LogMessage::operator<<(const unsigned short& v);  // NOLINT
+template LogMessage& LogMessage::operator<<(const int& v);
+template LogMessage& LogMessage::operator<<(const unsigned int& v);
+template LogMessage& LogMessage::operator<<(const long& v);           // NOLINT
+template LogMessage& LogMessage::operator<<(const unsigned long& v);  // NOLINT
+template LogMessage& LogMessage::operator<<(const long long& v);      // NOLINT
+template LogMessage& LogMessage::operator<<(
+    const unsigned long long& v);  // NOLINT
+template LogMessage& LogMessage::operator<<(void* const& v);
+template LogMessage& LogMessage::operator<<(const void* const& v);
+template LogMessage& LogMessage::operator<<(const float& v);
+template LogMessage& LogMessage::operator<<(const double& v);
+template LogMessage& LogMessage::operator<<(const bool& v);
+template LogMessage& LogMessage::operator<<(const std::string& v);
+template LogMessage& LogMessage::operator<<(const absl::string_view& v);
+LogMessageFatal::LogMessageFatal(const char* file, int line)
     : LogMessage(file, line, absl::LogSeverity::kFatal) {}
 
-LogMessageFatal::LogMessageFatal(const char *file, int line,
+LogMessageFatal::LogMessageFatal(const char* file, int line,
                                  absl::string_view failure_msg)
     : LogMessage(file, line, absl::LogSeverity::kFatal) {
   WithCheckFailureMessage(failure_msg);
@@ -483,12 +478,12 @@ LogMessageFatal::~LogMessageFatal() {
 #pragma warning(pop)
 #endif
 
-LogMessageQuietlyFatal::LogMessageQuietlyFatal(const char *file, int line)
+LogMessageQuietlyFatal::LogMessageQuietlyFatal(const char* file, int line)
     : LogMessage(file, line, absl::LogSeverity::kFatal) {
   SetFailQuietly();
 }
 
-LogMessageQuietlyFatal::LogMessageQuietlyFatal(const char *file, int line,
+LogMessageQuietlyFatal::LogMessageQuietlyFatal(const char* file, int line,
                                                absl::string_view failure_msg)
     : LogMessage(file, line, absl::LogSeverity::kFatal) {
   SetFailQuietly();
@@ -500,21 +495,20 @@ LogMessageQuietlyFatal::~LogMessageQuietlyFatal() {
   LogMessage::FailQuietly();
 }
 
-} // namespace logging_internal
+}  // namespace logging_internal
 
-void AddLogSink(LogSink *sink)
+void AddLogSink(LogSink* sink)
     ABSL_LOCKS_EXCLUDED(logging_internal::global_sinks_mutex) {
   absl::MutexLock global_sinks_lock(&logging_internal::global_sinks_mutex);
   if (!logging_internal::global_sinks)
-    logging_internal::global_sinks = new std::vector<LogSink *>();
+    logging_internal::global_sinks = new std::vector<LogSink*>();
   logging_internal::global_sinks->push_back(sink);
 }
 
-void RemoveLogSink(LogSink *sink)
+void RemoveLogSink(LogSink* sink)
     ABSL_LOCKS_EXCLUDED(logging_internal::global_sinks_mutex) {
   absl::MutexLock global_sinks_lock(&logging_internal::global_sinks_mutex);
-  if (!logging_internal::global_sinks)
-    return;
+  if (!logging_internal::global_sinks) return;
   for (auto iter = logging_internal::global_sinks->begin();
        iter != logging_internal::global_sinks->end(); ++iter) {
     if (*iter == sink) {
@@ -524,4 +518,4 @@ void RemoveLogSink(LogSink *sink)
   }
 }
 
-} // namespace rdss
+}  // namespace rdss

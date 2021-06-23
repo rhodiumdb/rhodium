@@ -29,7 +29,7 @@ std::string Strerror(int error_num) {
   // int where 0 indicates success.
   using strerror_r_type = decltype(strerror_r(0, nullptr, 0));
   constexpr bool kXsiCompliant = std::is_same<strerror_r_type, int>::value;
-  constexpr bool kGnuSpecific = std::is_same<strerror_r_type, char *>::value;
+  constexpr bool kGnuSpecific = std::is_same<strerror_r_type, char*>::value;
   static_assert(kXsiCompliant != kGnuSpecific,
                 "strerror_r should be either the XSI-compliant version or the "
                 "GNU-specific version");
@@ -46,8 +46,8 @@ std::string Strerror(int error_num) {
   } else if constexpr (kGnuSpecific) {
     // Note that without the `reinterpret_cast`, this cannot be compiled with
     // the XSI-compliant version of strerror_r.
-    return reinterpret_cast<char *>(strerror_r(error_num, buffer, kBufferSize));
+    return reinterpret_cast<char*>(strerror_r(error_num, buffer, kBufferSize));
   }
 }
 
-} // namespace rdss
+}  // namespace rdss

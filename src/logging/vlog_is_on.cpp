@@ -17,8 +17,8 @@
 #include <absl/strings/str_split.h>
 #include <absl/strings/strip.h>
 
-#include "errno_saver.hpp"
 #include "vlog_is_on.hpp"
+#include "errno_saver.hpp"
 #include "vlog_is_on.inc"
 
 // Construct a logging site from a logging level and epoch.
@@ -49,11 +49,9 @@ bool SafeFNMatch(absl::string_view pattern, absl::string_view str) {
     }
     if (pattern.front() == '*') {
       pattern.remove_prefix(1);
-      if (pattern.empty())
-        return true;
+      if (pattern.empty()) return true;
       do {
-        if (SafeFNMatch(pattern, str))
-          return true;
+        if (SafeFNMatch(pattern, str)) return true;
         str.remove_prefix(1);
       } while (!str.empty());
       return false;
@@ -66,7 +64,7 @@ bool SafeFNMatch(absl::string_view pattern, absl::string_view str) {
     return false;
   }
 }
-} // namespace logging_internal
+}  // namespace logging_internal
 
 // List of per-module log levels from FLAGS_vmodule. Once created
 // each element is never deleted/modified except for the vlog_level:
@@ -75,15 +73,15 @@ bool SafeFNMatch(absl::string_view pattern, absl::string_view str) {
 // delete/update it: other threads need to use it w/o locks.
 struct VModuleInfo {
   std::string module_pattern;
-  bool module_is_path; // i.e. it contains a path separator
+  bool module_is_path;  // i.e. it contains a path separator
   mutable std::atomic<int> vlog_level;
-  const VModuleInfo *next;
+  const VModuleInfo* next;
 };
 
 // Pointer to head of the VModuleInfo list.
 // It's a map from module pattern to logging level for those module(s).
 // Protected by vmodule_loc in the associated .inc file.
-static std::atomic<VModuleInfo *> vmodule_list;
+static std::atomic<VModuleInfo*> vmodule_list;
 
 // Logging sites initialize their epochs to zero. We initialize the
 // global epoch to 1, so that all logging sites are initially stale.
@@ -94,8 +92,8 @@ int SetVLOGLevel(absl::string_view module_pattern, int log_level) {
   int result = absl::GetFlag(FLAGS_v);
   bool found = false;
   absl::base_internal::SpinLockHolder l(
-      &logging_internal::vmodule_lock); // protect whole read-modify-write
-  for (const VModuleInfo *info = vmodule_list.load(std::memory_order_relaxed);
+      &logging_internal::vmodule_lock);  // protect whole read-modify-write
+  for (const VModuleInfo* info = vmodule_list.load(std::memory_order_relaxed);
        info != nullptr; info = info->next) {
     if (info->module_pattern == module_pattern) {
       if (!found) {
@@ -110,7 +108,7 @@ int SetVLOGLevel(absl::string_view module_pattern, int log_level) {
     }
   }
   if (!found) {
-    VModuleInfo *info = new VModuleInfo;
+    VModuleInfo* info = new VModuleInfo;
     info->module_pattern = std::string(module_pattern);
 #ifdef _WIN32
     info->module_is_path =
@@ -127,8 +125,8 @@ int SetVLOGLevel(absl::string_view module_pattern, int log_level) {
 
   if (RDSS_VLOG_IS_ON(1)) {
     ABSL_RAW_LOG(INFO, "Set VLOG level for \"%.*s\" to %d",
-                 static_cast<int>(module_pattern.size()), module_pattern.data(),
-                 log_level);
+            static_cast<int>(module_pattern.size()), module_pattern.data(),
+            log_level);
   }
   return result;
 }
@@ -137,7 +135,7 @@ namespace logging_internal {
 
 // NOTE: Individual RDSS_VLOG statements cache the integer log level pointers.
 // NOTE: This function must not allocate memory or require any locks.
-int InitVLOG(std::atomic<int32_t> *site, absl::string_view full_path) {
+int InitVLOG(std::atomic<int32_t>* site, absl::string_view full_path) {
   // protect the errno global in case someone writes:
   // RDSS_VLOG(..) << "The last error was " << strerror(errno)
   ErrnoSaver errno_saver_;
@@ -151,8 +149,7 @@ int InitVLOG(std::atomic<int32_t> *site, absl::string_view full_path) {
 #ifdef _WIN32
     } else {
       const size_t sep = basename.rfind('\\');
-      if (sep != basename.npos)
-        basename.remove_prefix(sep + 1);
+      if (sep != basename.npos) basename.remove_prefix(sep + 1);
 #endif
     }
   }
@@ -180,7 +177,7 @@ int InitVLOG(std::atomic<int32_t> *site, absl::string_view full_path) {
 
   // Find target in list of modules, and set new_site with a
   // module-specific verbosity level, if found.
-  const VModuleInfo *info = vmodule_list.load(std::memory_order_acquire);
+  const VModuleInfo* info = vmodule_list.load(std::memory_order_acquire);
 
   // If we find a matching module in the list, we use its `vlog_level` to
   // control the `VLOG` at the call site. Otherwise, the site remains set to its
@@ -194,7 +191,7 @@ int InitVLOG(std::atomic<int32_t> *site, absl::string_view full_path) {
         break;
       }
     } else if (rdss::logging_internal::SafeFNMatch(info->module_pattern,
-                                                   stem_basename)) {
+                                                  stem_basename)) {
       // Otherwise, just match the basename.
       new_site =
           Site(info->vlog_level.load(std::memory_order_acquire), global_epoch);
@@ -212,7 +209,7 @@ int InitVLOG(std::atomic<int32_t> *site, absl::string_view full_path) {
   return SiteLevel(new_site);
 }
 
-bool VLogEnabledSlow(std::atomic<int32_t> *site, int32_t level,
+bool VLogEnabledSlow(std::atomic<int32_t>* site, int32_t level,
                      absl::string_view file) {
   const int32_t site_copy = site->load(std::memory_order_acquire);
   int32_t site_level = ABSL_PREDICT_TRUE(SiteEpoch(site_copy) == GlobalEpoch())
@@ -226,5 +223,5 @@ bool VLogEnabledSlow(std::atomic<int32_t> *site, int32_t level,
   return ABSL_PREDICT_FALSE(site_level >= level);
 }
 
-} // namespace logging_internal
-} // namespace rdss
+}  // namespace logging_internal
+}  // namespace rdss

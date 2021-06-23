@@ -25,22 +25,22 @@
 namespace rdss {
 namespace logging_internal {
 
-CheckOpMessageBuilder::CheckOpMessageBuilder(const char *exprtext)
+CheckOpMessageBuilder::CheckOpMessageBuilder(const char* exprtext)
     : stream_(new std::ostringstream) {
   *stream_ << exprtext << " (";
 }
 
-std::ostream *CheckOpMessageBuilder::ForVar2() {
+std::ostream* CheckOpMessageBuilder::ForVar2() {
   *stream_ << " vs. ";
   return stream_.get();
 }
 
-std::string *CheckOpMessageBuilder::NewString() {
+std::string* CheckOpMessageBuilder::NewString() {
   *stream_ << ")";
   return new std::string(stream_->str());
 }
 
-void MakeCheckOpValueString(std::ostream *os, const char v) {
+void MakeCheckOpValueString(std::ostream* os, const char v) {
   if (v >= 32 && v <= 126) {
     (*os) << "'" << v << "'";
   } else {
@@ -48,7 +48,7 @@ void MakeCheckOpValueString(std::ostream *os, const char v) {
   }
 }
 
-void MakeCheckOpValueString(std::ostream *os, const signed char v) {
+void MakeCheckOpValueString(std::ostream* os, const signed char v) {
   if (v >= 32 && v <= 126) {
     (*os) << "'" << v << "'";
   } else {
@@ -56,7 +56,7 @@ void MakeCheckOpValueString(std::ostream *os, const signed char v) {
   }
 }
 
-void MakeCheckOpValueString(std::ostream *os, const unsigned char v) {
+void MakeCheckOpValueString(std::ostream* os, const unsigned char v) {
   if (v >= 32 && v <= 126) {
     (*os) << "'" << v << "'";
   } else {
@@ -64,7 +64,7 @@ void MakeCheckOpValueString(std::ostream *os, const unsigned char v) {
   }
 }
 
-void MakeCheckOpValueString(std::ostream *os, const void *p) {
+void MakeCheckOpValueString(std::ostream* os, const void* p) {
   if (p == nullptr) {
     (*os) << "(null)";
   } else {
@@ -72,12 +72,12 @@ void MakeCheckOpValueString(std::ostream *os, const void *p) {
   }
 }
 
-void DieBecauseNull(const char *file, int line, const char *exprtext) {
+void DieBecauseNull(const char* file, int line, const char* exprtext) {
   RDSS_LOG(FATAL)
       .AtLocation(file, line)
       .WithCheckFailureMessage(
           absl::StrCat("'", exprtext, "' Must be non-null"));
 }
 
-} // namespace logging_internal
-} // namespace rdss
+}  // namespace logging_internal
+}  // namespace rdss

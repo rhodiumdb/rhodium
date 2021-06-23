@@ -23,6 +23,6 @@ namespace rdss {
 // Thread safe version of strerror.
 std::string Strerror(int error_num);
 
-} // namespace rdss
+}  // namespace rdss
 
-#endif // RDSS_LOGGING_STRERROR_H_
+#endif  // RDSS_LOGGING_STRERROR_H_
