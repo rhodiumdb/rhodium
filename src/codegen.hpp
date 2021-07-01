@@ -67,7 +67,7 @@ struct Codegen {
         , source(source_)
         , typing_context(typing_context_) {}
 
-    absl::btree_map<std::string, RelationCode> table_relations;
+    absl::btree_map<RelName, RelationCode> table_relations;
     absl::btree_map<Relation*, RelationCode> view_relations;
     DataStructure ds;
     FreshVariableSource* source;
@@ -153,13 +153,13 @@ struct Codegen {
         return {result, new TypeRow(type_vector)};
     }
 
-    absl::Status Run(Relation* rel) {
+    absl::Status ProcessRelation(Relation* rel) {
         if (view_relations.contains(rel)) {
             return absl::OkStatus();
         }
 
         if (auto r = DynamicCast<Relation, RelationReference>(rel)) {
-            std::string name = r.value()->name;
+            RelName name = r.value()->name;
             Type* type = typing_context.at(rel);
 
             if (table_relations.contains(name)) {
@@ -167,7 +167,7 @@ struct Codegen {
                 return absl::OkStatus();
             }
 
-            RelationCode rel_code = SimpleRelationCode(name, type);
+            RelationCode rel_code = SimpleRelationCode(name.name, type);
 
             table_relations[name] = rel_code;
             view_relations[rel] = rel_code;
@@ -183,8 +183,8 @@ struct Codegen {
             auto rhs = r.value()->rhs;
             auto join_on = r.value()->attributes;
 
-            RETURN_IF_ERROR(this->Run(lhs));
-            RETURN_IF_ERROR(this->Run(rhs));
+            RETURN_IF_ERROR(this->ProcessRelation(lhs));
+            RETURN_IF_ERROR(this->ProcessRelation(rhs));
 
             {
                 VarName restricted_lhs = source->Fresh();
@@ -263,8 +263,8 @@ struct Codegen {
             auto lhs = r.value()->lhs;
             auto rhs = r.value()->rhs;
 
-            RETURN_IF_ERROR(this->Run(lhs));
-            RETURN_IF_ERROR(this->Run(rhs));
+            RETURN_IF_ERROR(this->ProcessRelation(lhs));
+            RETURN_IF_ERROR(this->ProcessRelation(rhs));
 
             InsertionOfView(lhs)->body.push_back(
                 new ActionInvoke(InsertionOfView(rel)->name,
@@ -283,8 +283,8 @@ struct Codegen {
             auto lhs = r.value()->lhs;
             auto rhs = r.value()->rhs;
 
-            RETURN_IF_ERROR(this->Run(lhs));
-            RETURN_IF_ERROR(this->Run(rhs));
+            RETURN_IF_ERROR(this->ProcessRelation(lhs));
+            RETURN_IF_ERROR(this->ProcessRelation(rhs));
 
             InsertionOfView(lhs)->body.push_back(
                 new ActionInvoke(InsertionOfView(rel)->name,
@@ -321,7 +321,7 @@ struct Codegen {
             auto perm = r.value()->rel.perm;
             auto underlying = r.value()->rel.rel;
 
-            RETURN_IF_ERROR(this->Run(underlying));
+            RETURN_IF_ERROR(this->ProcessRelation(underlying));
 
             std::vector<std::pair<VarName, Type*>> viewed_elements;
             viewed_elements.resize(r.value()->rel.Arity(),

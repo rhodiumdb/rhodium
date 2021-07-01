@@ -109,7 +109,7 @@ bool InterpretPredicate(Predicate* predicate,
 
 class Interpreter {
 public:
-    Interpreter(const absl::btree_map<std::string, Table>& variables_)
+    Interpreter(const absl::btree_map<RelName, Table>& variables_)
         : variables(variables_) {}
 
     absl::Status Interpret(Relation* input);
@@ -122,7 +122,7 @@ public:
     }
 
 private:
-    absl::btree_map<std::string, Table> variables;
+    absl::btree_map<RelName, Table> variables;
     absl::btree_map<Relation*, Table> context;
 };
 

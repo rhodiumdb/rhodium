@@ -107,6 +107,19 @@ struct RelationFactory {
     }
 };
 
+struct RelName {
+    std::string name;
+
+    RelName(absl::string_view name_) : name(name_) {}
+
+    std::string ToString() const {
+        return name;
+    }
+
+    auto operator<=>(const RelName&) const = default;
+};
+
+
 template<typename S, typename T>
 absl::optional<T*> DynamicCast(S* pointer) {
     T* casted = dynamic_cast<T*>(pointer);
@@ -115,14 +128,14 @@ absl::optional<T*> DynamicCast(S* pointer) {
 }
 
 struct RelationReference : public Relation {
-    std::string name;
+    RelName name;
     int32_t arity;
 
-    explicit RelationReference(absl::string_view name_, int32_t arity_)
+    RelationReference(absl::string_view name_, int32_t arity_)
         : name(name_), arity(arity_) {}
 
     std::string ToString() const override {
-        return name;
+        return name.ToString();
     }
 
     int32_t Arity() const override {
@@ -318,16 +331,23 @@ struct TypeName {
 };
 
 struct FreshVariableSource {
-    FreshVariableSource() : number(0) {}
+    FreshVariableSource() : var_number(0), rel_number(0) {}
 
     VarName Fresh() {
-        std::string result = absl::StrFormat("fresh%d", number);
-        number++;
+        std::string result = absl::StrFormat("fresh%d", var_number);
+        var_number++;
         return VarName(result);
     }
 
+    RelName FreshRel() {
+        std::string result = absl::StrFormat("Rel%d", rel_number);
+        rel_number++;
+        return RelName(result);
+    }
+
 private:
-    int32_t number;
+    int32_t var_number;
+    int32_t rel_number;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -250,10 +250,10 @@ absl::Status TestYannakakis() {
     Table result_table(0);
 
     {
-        absl::btree_map<std::string, Table> variables;
-        variables.insert_or_assign("A", a_table);
-        variables.insert_or_assign("B", b_table);
-        variables.insert_or_assign("C", c_table);
+        absl::btree_map<RelName, Table> variables;
+        variables.insert_or_assign(RelName("A"), a_table);
+        variables.insert_or_assign(RelName("B"), b_table);
+        variables.insert_or_assign(RelName("C"), c_table);
 
         Interpreter interpreter(variables);
 
@@ -268,10 +268,10 @@ absl::Status TestYannakakis() {
     }
 
     {
-        absl::btree_map<std::string, Table> variables;
-        variables.insert_or_assign("A", a_table);
-        variables.insert_or_assign("B", b_table);
-        variables.insert_or_assign("C", c_table);
+        absl::btree_map<RelName, Table> variables;
+        variables.insert_or_assign(RelName("A"), a_table);
+        variables.insert_or_assign(RelName("B"), b_table);
+        variables.insert_or_assign(RelName("C"), c_table);
 
         Interpreter interpreter(variables);
 
@@ -306,9 +306,9 @@ absl::Status TestInterpreter() {
     Table result_table(0);
 
     {
-        absl::btree_map<std::string, Table> variables;
-        variables.insert_or_assign("R", r_table);
-        variables.insert_or_assign("S", s_table);
+        absl::btree_map<RelName, Table> variables;
+        variables.insert_or_assign(RelName("R"), r_table);
+        variables.insert_or_assign(RelName("S"), s_table);
 
         Interpreter interpreter(variables);
 
@@ -331,9 +331,9 @@ absl::Status TestInterpreter() {
     RETURN_IF_ERROR(s_table.InsertTuple({1002, 504}));
 
     {
-        absl::btree_map<std::string, Table> variables;
-        variables.insert_or_assign("R", r_table);
-        variables.insert_or_assign("S", s_table);
+        absl::btree_map<RelName, Table> variables;
+        variables.insert_or_assign(RelName("R"), r_table);
+        variables.insert_or_assign(RelName("S"), s_table);
 
         Interpreter interpreter(variables);
 
@@ -382,7 +382,7 @@ absl::Status TestCodegen() {
 
     Codegen codegen("Example", &source, typing_context);
 
-    RETURN_IF_ERROR(codegen.Run(semijoin));
+    RETURN_IF_ERROR(codegen.ProcessRelation(semijoin));
 
     std::string generated = codegen.ds.ToCpp(&source);
 
