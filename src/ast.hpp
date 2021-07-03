@@ -306,6 +306,43 @@ struct RelationView : public Relation {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+struct RAction {
+    virtual ~RAction() = default;
+};
+
+struct RSeq : public RAction {
+    std::vector<RAction*> body;
+
+    explicit RSeq(const std::vector<RAction*>& body_) : body(body_) {}
+};
+
+struct RUnionWith : public RAction {
+    RelName name;
+    Relation* relation;
+
+    RUnionWith(RelName name_, Relation* relation_)
+        : name(name_), relation(relation_) {}
+};
+
+struct RFor : public RAction {
+    Relation* relation;
+    RelName variable;
+    std::vector<RAction*> body;
+
+    RFor(Relation* relation_,
+         RelName variable_,
+         std::vector<RAction*> body_)
+        : relation(relation_), variable(variable_), body(body_) {}
+};
+
+struct RReturn : public RAction {
+    Relation* relation;
+
+    explicit RReturn(Relation* relation_) : relation(relation_) {}
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
 struct TypeParameter {
     std::string name;
 

@@ -1,5 +1,5 @@
-{ stdenv, lib, cmake
-, abseil-cpp, gtest, z3, highway, rapidcheck
+{ stdenv, lib, cmake, pkgconfig
+, abseil-cpp, gtest, highway, rapidcheck, tree-sitter, z3
 }:
 
 stdenv.mkDerivation {
@@ -11,9 +11,9 @@ stdenv.mkDerivation {
     src = lib.cleanSource ./..;
   };
 
-  buildInputs = [ abseil-cpp gtest highway rapidcheck z3 ];
+  buildInputs = [ abseil-cpp gtest highway rapidcheck tree-sitter z3 ];
 
-  nativeBuildInputs = [ cmake ];
+  nativeBuildInputs = [ cmake pkgconfig ];
 
   doCheck = true;
 

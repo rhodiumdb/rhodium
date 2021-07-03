@@ -17,6 +17,7 @@
 #include "ghd.hpp"
 #include "interpreter.hpp"
 #include "macros.hpp"
+#include "parser.hpp"
 #include "subprocess.hpp"
 #include "logging/logging.hpp"
 #include "filesystem/filesystem.hpp"
@@ -416,6 +417,15 @@ absl::Status TestCodegen() {
     return absl::OkStatus();
 }
 
+absl::Status TestParser() {
+    std::string code = "fn main(foo: i8) {}";
+    ASSIGN_OR_RETURN(TSTree* tree, RunParser(code));
+    std::cerr << PrintTree(code.c_str(), tree);
+    ts_tree_delete(tree);
+
+    return absl::OkStatus();
+}
+
 absl::Status RealMain() {
     rdss::DataStructure example("Example");
     // example.members.push_back(
@@ -436,6 +446,7 @@ absl::Status RealMain() {
     RETURN_IF_ERROR(TestYannakakis());
     RETURN_IF_ERROR(TestInterpreter());
     RETURN_IF_ERROR(TestCodegen());
+    RETURN_IF_ERROR(TestParser());
 
     return absl::OkStatus();
 }

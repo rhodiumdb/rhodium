@@ -1,0 +1,3 @@
+[submodule "deps/tree-sitter-rhodium"]
+	path = deps/tree-sitter-rhodium
+	url = https://github.com/rhodiumdb/tree-sitter-rhodium.git

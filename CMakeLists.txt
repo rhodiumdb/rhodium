@@ -10,6 +10,17 @@ set(CMAKE_CXX_STANDARD 20)
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -g -O1")
 # set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fno-omit-frame-pointer -g -O1")
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(TREE_SITTER REQUIRED IMPORTED_TARGET tree-sitter)
+
+add_library(rdss_parser
+  deps/tree-sitter-rhodium/src/parser.c
+  src/parser.cpp)
+target_link_libraries(rdss_parser
+  absl::flags
+  absl::time
+  PkgConfig::TREE_SITTER)
+
 add_library(rdss_logging
   src/logging/logging.cpp
   src/logging/log_entry.cpp
@@ -36,6 +47,7 @@ add_executable(rdss
 target_link_libraries(rdss
   rdss_filesystem
   rdss_logging
+  rdss_parser
   absl::hash
   absl::strings
   absl::status
