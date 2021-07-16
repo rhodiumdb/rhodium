@@ -76,6 +76,10 @@ struct Viewed {
         }
         return result;
     }
+
+    bool IsLocal() const {
+        return rel->IsLocal();
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -91,6 +95,7 @@ struct Function {
 struct Relation {
     virtual std::string ToString() const = 0;
     virtual int32_t Arity() const = 0;
+    virtual bool IsLocal() const = 0;
     virtual ~Relation() = default;
 };
 
@@ -130,9 +135,14 @@ absl::optional<T*> DynamicCast(S* pointer) {
 struct RelationReference : public Relation {
     RelName name;
     int32_t arity;
+    bool local;
 
-    RelationReference(absl::string_view name_, int32_t arity_)
-        : name(name_), arity(arity_) {}
+    RelationReference(RelName name_, int32_t arity_, bool local_ = false)
+        : name(name_), arity(arity_), local(local_) {}
+
+    RelationReference(
+        absl::string_view name_, int32_t arity_, bool local_ = false)
+        : name(name_), arity(arity_), local(local_) {}
 
     std::string ToString() const override {
         return name.ToString();
@@ -140,6 +150,10 @@ struct RelationReference : public Relation {
 
     int32_t Arity() const override {
         return arity;
+    }
+
+    bool IsLocal() const override {
+        return local;
     }
 };
 
@@ -174,6 +188,10 @@ struct RelationJoin : public Relation {
         RDSS_CHECK_GE(result_arity, 0) << "type error got past the typechecker";
         return result_arity;
     }
+
+    bool IsLocal() const override {
+        return lhs->IsLocal() || rhs->IsLocal();
+    }
 };
 
 struct RelationSemijoin : public Relation {
@@ -201,6 +219,10 @@ struct RelationSemijoin : public Relation {
     int32_t Arity() const override {
         return lhs->Arity();
     }
+
+    bool IsLocal() const override {
+        return lhs->IsLocal() || rhs->IsLocal();
+    }
 };
 
 struct RelationUnion : public Relation {
@@ -223,6 +245,10 @@ struct RelationUnion : public Relation {
         RDSS_CHECK_EQ(lhs_arity, rhs_arity)
             << "type error got past the typechecker";
         return lhs_arity;
+    }
+
+    bool IsLocal() const override {
+        return lhs->IsLocal() || rhs->IsLocal();
     }
 };
 
@@ -247,6 +273,10 @@ struct RelationDifference : public Relation {
             << "type error got past the typechecker";
         return lhs_arity;
     }
+
+    bool IsLocal() const override {
+        return lhs->IsLocal() || rhs->IsLocal();
+    }
 };
 
 struct RelationSelect : public Relation {
@@ -265,6 +295,10 @@ struct RelationSelect : public Relation {
 
     int32_t Arity() const override {
         return rel->Arity();
+    }
+
+    bool IsLocal() const override {
+        return rel->IsLocal();
     }
 };
 
@@ -287,6 +321,10 @@ struct RelationMap : public Relation {
             << "type error got past the typechecker";
         return function.results;
     }
+
+    bool IsLocal() const override {
+        return rel->IsLocal();
+    }
 };
 
 struct RelationView : public Relation {
@@ -301,6 +339,10 @@ struct RelationView : public Relation {
 
     int32_t Arity() const override {
         return rel.Arity();
+    }
+
+    bool IsLocal() const override {
+        return rel.IsLocal();
     }
 };
 
