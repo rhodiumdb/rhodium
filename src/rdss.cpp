@@ -16,6 +16,7 @@
 #include "codegen.hpp"
 #include "ghd.hpp"
 #include "interpreter.hpp"
+#include "lsp.hpp"
 #include "macros.hpp"
 #include "parser.hpp"
 #include "subprocess.hpp"
