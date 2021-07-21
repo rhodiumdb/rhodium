@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TREE_SITTER REQUIRED IMPORTED_TARGET tree-sitter)
 
+pkg_check_modules(JSONCPP REQUIRED IMPORTED_TARGET jsoncpp)
+
+include_directories("${JSONCPP_INCLUDE_DIRS}")
+
 add_library(rdss_parser
   deps/tree-sitter-rhodium/src/parser.c
   src/parser.cpp)
@@ -52,7 +56,9 @@ target_link_libraries(rdss
   absl::strings
   absl::status
   absl::statusor
-  z3)
+  PkgConfig::JSONCPP
+  z3
+)
 install(TARGETS rdss DESTINATION bin)
 
 enable_testing()
