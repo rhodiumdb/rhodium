@@ -4142,24 +4142,19 @@ absl::Status FromJSON(const JSON& input, WorkspaceFolder* result) {
     return absl::OkStatus();
 }
 
-// JSON ToJSON(const InitializeParams& input) {
-//     JSON result(Json::objectValue);
-//     Merge(&result, ToJSON(input.underlying_wdpo));
-//     if (input.process_id.has_value()) {
-//         result["processId"] = ToJSON(input.process_id.value());
-//     } else {
-//         result["processId"] = JSON();
-//     }
-//     OptionallySet(&result, "clientInfo", input.client_info);
-//     OptionallySet(&result, "locale", input.locale);
-//     OptionallySet(&result, "rootPath", input.root_path);
-//     OptionallySet(&result, "rootUri", input.root_uri);
-//     OptionallySet(&result, "initializationOptions", input.initialization_options);
-//     Set(&result, "capabilities", input.capabilities);
-//     OptionallySet(&result, "trace", input.trace);
-//     OptionallySet(&result, "workspaceFolders", input.workspace_folders);
-//     return result;
-// }
+absl::Status FromJSON(const JSON& input, InitializeParams* result) {
+    RETURN_IF_ERROR(FromJSON(input, &result->underlying_wdpo));
+    RETURN_IF_ERROR(Get(&result->process_id, input, "processId"));
+    RETURN_IF_ERROR(OptionallyGet(&result->client_info, input, "clientInfo"));
+    RETURN_IF_ERROR(OptionallyGet(&result->locale, input, "locale"));
+    RETURN_IF_ERROR(OptionallyGet(&result->root_path, input, "rootPath"));
+    RETURN_IF_ERROR(OptionallyGet(&result->root_uri, input, "rootUri"));
+    RETURN_IF_ERROR(OptionallyGet(&result->initialization_options, input, "initializationOptions"));
+    RETURN_IF_ERROR(Get(&result->capabilities, input, "capabilities"));
+    RETURN_IF_ERROR(OptionallyGet(&result->trace, input, "trace"));
+    RETURN_IF_ERROR(OptionallyGet(&result->workspace_folders, input, "workspaceFolders"));
+    return absl::OkStatus();
+}
 
 absl::Status FromJSON(const JSON& input, InitializeResult* result) {
     RETURN_IF_ERROR(Get(&result->capabilities, input, "capabilities"));
@@ -4245,13 +4240,10 @@ absl::Status FromJSON(const JSON& input, ShowMessageRequestParams* result) {
     return absl::OkStatus();
 }
 
-// JSON ToJSON(const ShowMessageRequestResult& input) {
-//     if (input.action.has_value()) {
-//         return ToJSON(input.action);
-//     } else {
-//         return JSON();
-//     }
-// }
+absl::Status FromJSON(const JSON& input, ShowMessageRequestResult* result) {
+    RETURN_IF_ERROR(FromJSON(input, &result->action));
+    return absl::OkStatus();
+}
 
 absl::Status FromJSON(const JSON& input, ShowDocumentParams* result) {
     RETURN_IF_ERROR(Get(&result->uri, input, "uri"));
@@ -4374,14 +4366,10 @@ absl::Status FromJSON(const JSON& input, SymbolInformation* result) {
     return absl::OkStatus();
 }
 
-// JSON ToJSON(const WorkspaceSymbolResult& input) {
-//     JSON result(Json::objectValue);
-//     if (input.symbols.has_value()) {
-//         return ToJSON(input.symbols.value());
-//     } else {
-//         return JSON();
-//     }
-// }
+absl::Status FromJSON(const JSON& input, WorkspaceSymbolResult* result) {
+    RETURN_IF_ERROR(FromJSON(input, &result->symbols));
+    return absl::OkStatus();
+}
 
 absl::Status FromJSON(const JSON& input, ExecuteCommandParams* result) {
     RETURN_IF_ERROR(FromJSON(input, &result->underlying_work_done_progress));
@@ -4780,22 +4768,20 @@ absl::Status FromJSON(const JSON& input, CodeActionParams* result) {
     return absl::OkStatus();
 }
 
-// JSON ToJSON(const CodeAction& input) {
-//     JSON result(Json::objectValue);
-//     Set(&result, "title", input.title);
-//     OptionallySet(&result, "kind", input.kind);
-//     OptionallySet(&result, "diagnostics", input.diagnostics);
-//     OptionallySet(&result, "isPreferred", input.is_preferred);
-//     if (input.disabled.has_value()) {
-//         JSON disabled(Json::objectValue);
-//         disabled["reason"] = ToJSON(input.disabled.value());
-//         result["disabled"] = disabled;
-//     }
-//     OptionallySet(&result, "edit", input.edit);
-//     OptionallySet(&result, "command", input.command);
-//     OptionallySet(&result, "data", input.data);
-//     return result;
-// }
+absl::Status FromJSON(const JSON& input, CodeAction* result) {
+    RETURN_IF_ERROR(Get(&result->title, input, "title"));
+    RETURN_IF_ERROR(OptionallyGet(&result->kind, input, "kind"));
+    RETURN_IF_ERROR(OptionallyGet(&result->diagnostics, input, "diagnostics"));
+    RETURN_IF_ERROR(OptionallyGet(&result->is_preferred, input, "isPreferred"));
+    JSON disabled = input.get("disabled", -1);
+    if (disabled.isObject()) {
+        RETURN_IF_ERROR(OptionallyGet(&result->disabled, disabled, "reason"));
+    }
+    RETURN_IF_ERROR(OptionallyGet(&result->edit, input, "edit"));
+    RETURN_IF_ERROR(OptionallyGet(&result->command, input, "command"));
+    RETURN_IF_ERROR(OptionallyGet(&result->data, input, "data"));
+    return absl::OkStatus();
+}
 
 absl::Status FromJSON(const JSON& input, CodeLensParams* result) {
     RETURN_IF_ERROR(FromJSON(input, &result->underlying_wdpp));
@@ -4907,24 +4893,43 @@ absl::Status FromJSON(const JSON& input, PrepareRenameParams* result) {
     return absl::OkStatus();
 }
 
-// JSON ToJSON(const PrepareRenameResult& input) {
-//     if (input.range.has_value() && input.placeholder.has_value()) {
-//         RDSS_CHECK(!input.default_behavior.has_value());
-//         JSON result(Json::objectValue);
-//         result["range"] = ToJSON(input.range.value());
-//         result["placeholder"] = ToJSON(input.placeholder.value());
-//         return result;
-//     } else if (input.range.has_value()) {
-//         RDSS_CHECK(!input.default_behavior.has_value());
-//         return ToJSON(input.range.value());
-//     } else if (input.default_behavior.has_value()) {
-//         JSON result(Json::objectValue);
-//         result["defaultBehavior"] = ToJSON(input.default_behavior.value());
-//         return result;
-//     } else {
-//         return JSON();
-//     }
-// }
+absl::Status FromJSON(const JSON& input, PrepareRenameResult* result) {
+    result->range = absl::nullopt;
+    result->placeholder = absl::nullopt;
+    result->default_behavior = absl::nullopt;
+    if (input == JSON()) {
+        return absl::OkStatus();
+    } else if (input.isObject()) {
+        JSON range = input.get("range", -1);
+        JSON placeholder = input.get("placeholder", -1);
+        JSON default_behavior = input.get("defaultBehavior", -1);
+        if (range.isObject() && placeholder.isString()) {
+            RDSS_CHECK(default_behavior.isIntegral());
+            Range range_val;
+            std::string placeholder_val;
+            RETURN_IF_ERROR(FromJSON(range, &range_val));
+            RETURN_IF_ERROR(FromJSON(placeholder, &placeholder_val));
+            result->range = range_val;
+            result->placeholder = placeholder_val;
+        } else if (default_behavior.isBool()) {
+            RDSS_CHECK(range.isIntegral());
+            RDSS_CHECK(placeholder.isIntegral());
+            bool default_behavior_val;
+            RETURN_IF_ERROR(FromJSON(default_behavior, &default_behavior_val));
+            result->default_behavior = default_behavior_val;
+        } else {
+            RDSS_CHECK(range.isIntegral());
+            RDSS_CHECK(placeholder.isIntegral());
+            RDSS_CHECK(default_behavior.isIntegral());
+            Range range_val;
+            RETURN_IF_ERROR(FromJSON(input, &range_val));
+            result->range = range_val;
+        }
+    } else {
+        return absl::InternalError("Failed to parse PrepareRenameResult");
+    }
+    return absl::OkStatus();
+}
 
 absl::Status FromJSON(const JSON& input, FoldingRangeParams* result) {
     RETURN_IF_ERROR(FromJSON(input, &result->underlying_wdpp));
@@ -4932,7 +4937,6 @@ absl::Status FromJSON(const JSON& input, FoldingRangeParams* result) {
     RETURN_IF_ERROR(Get(&result->text_document, input, "textDocument"));
     return absl::OkStatus();
 }
-
 
 absl::Status FromJSON(const JSON& input, FoldingRangeKind* result) {
     if (!input.isString()) {
@@ -4968,14 +4972,17 @@ absl::Status FromJSON(const JSON& input, SelectionRangeParams* result) {
     return absl::OkStatus();
 }
 
-// JSON ToJSON(const SelectionRange& input) {
-//     JSON result(Json::objectValue);
-//     Set(&result, "range", input.range);
-//     if (input.parent.has_value()) {
-//         result["parent"] = ToJSON(*(input.parent.value()));
-//     }
-//     return result;
-// }
+absl::Status FromJSON(const JSON& input, SelectionRange* result) {
+    RETURN_IF_ERROR(Get(&result->range, input, "range"));
+    result->parent = absl::nullopt;
+    auto parent_json = input.get("parent", -1);
+    if (!parent_json.isIntegral()) {
+        SelectionRange* parent = new SelectionRange();
+        RETURN_IF_ERROR(FromJSON(parent_json, parent));
+        result->parent = parent;
+    }
+    return absl::OkStatus();
+}
 
 absl::Status FromJSON(const JSON& input, CallHierarchyPrepareParams* result) {
     RETURN_IF_ERROR(FromJSON(input, &result->underlying_tdpp));
