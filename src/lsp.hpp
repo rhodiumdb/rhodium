@@ -23,6 +23,8 @@
 #include <vector>
 
 #include <absl/container/btree_map.h>
+#include <absl/status/status.h>
+#include <absl/status/statusor.h>
 #include <absl/types/optional.h>
 #include <absl/types/variant.h>
 
@@ -121,6 +123,11 @@ JSON ToJSON(const absl::btree_map<K, V>& input) {
 }
 
 template<typename T>
+void Set(JSON* obj, const char* key, const T& val) {
+    (*obj)[key] = ToJSON(val);
+}
+
+template<typename T>
 void OptionallySet(JSON* obj, const char* key, const absl::optional<T>& val) {
     if (val.has_value()) {
         (*obj)[key] = ToJSON(val.value());
@@ -145,7 +152,7 @@ enum class ErrorCodes : int32_t {
     LspRequestCancelled = -32800
 };
 
-JSON ToJSON(ErrorCodes input) {
+JSON ToJSON(const ErrorCodes& input) {
     return static_cast<int32_t>(input);
 }
 
@@ -159,8 +166,8 @@ struct ResponseError {
 
 JSON ToJSON(const ResponseError& input) {
     JSON result(Json::objectValue);
-    result["code"] = ToJSON(input.code);
-    result["message"] = ToJSON(input.message);
+    Set(&result, "code", input.code);
+    Set(&result, "message", input.message);
     OptionallySet(&result, "data", input.data);
     return result;
 }
@@ -196,7 +203,7 @@ struct RegularExpressionsClientCapabilities {
 
 JSON ToJSON(const RegularExpressionsClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["engine"] = ToJSON(input.engine);
+    Set(&result, "engine", input.engine);
     OptionallySet(&result, "version", input.version);
     return result;
 }
@@ -208,8 +215,8 @@ struct Position {
 
 JSON ToJSON(const Position& input) {
     JSON result(Json::objectValue);
-    result["line"] = ToJSON(input.line);
-    result["character"] = ToJSON(input.character);
+    Set(&result, "line", input.line);
+    Set(&result, "character", input.character);
     return result;
 }
 
@@ -220,8 +227,8 @@ struct Range {
 
 JSON ToJSON(const Range& input) {
     JSON result(Json::objectValue);
-    result["start"] = ToJSON(input.start);
-    result["end"] = ToJSON(input.end);
+    Set(&result, "start", input.start);
+    Set(&result, "end", input.end);
     return result;
 }
 
@@ -232,8 +239,8 @@ struct Location {
 
 JSON ToJSON(const Location& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "uri", input.uri);
+    Set(&result, "range", input.range);
     return result;
 }
 
@@ -246,10 +253,10 @@ struct LocationLink {
 
 JSON ToJSON(const LocationLink& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "origin_selection_range", input.origin_selection_range);
-    result["target_uri"] = ToJSON(input.target_uri);
-    result["target_range"] = ToJSON(input.target_range);
-    result["target_selection_range"] = ToJSON(input.target_selection_range);
+    OptionallySet(&result, "originSelectionRange", input.origin_selection_range);
+    Set(&result, "targetUri", input.target_uri);
+    Set(&result, "targetRange", input.target_range);
+    Set(&result, "targetSelectionRange", input.target_selection_range);
     return result;
 }
 
@@ -269,7 +276,9 @@ struct DiagnosticCode {
 };
 
 JSON ToJSON(const DiagnosticCode& input) {
-    return ToJSON(input.code);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.code));
+    return result;
 }
 
 struct CodeDescription {
@@ -278,7 +287,7 @@ struct CodeDescription {
 
 JSON ToJSON(const CodeDescription& input) {
     JSON result(Json::objectValue);
-    result["href"] = ToJSON(input.href);
+    Set(&result, "href", input.href);
     return result;
 }
 
@@ -298,8 +307,8 @@ struct DiagnosticRelatedInformation {
 
 JSON ToJSON(const DiagnosticRelatedInformation& input) {
     JSON result(Json::objectValue);
-    result["location"] = ToJSON(input.location);
-    result["message"] =  ToJSON(input.message);
+    Set(&result, "location", input.location);
+    Set(&result, "message", input.message);
     return result;
 }
 
@@ -317,15 +326,15 @@ struct Diagnostic {
 
 JSON ToJSON(const Diagnostic& input) {
     JSON result(Json::objectValue);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "range", input.range);
     OptionallySet(&result, "severity", input.severity);
     OptionallySet(&result, "code", input.code);
-    OptionallySet(&result, "code_description", input.code_description);
+    OptionallySet(&result, "codeDescription", input.code_description);
     OptionallySet(&result, "source", input.source);
-    result["message"] = ToJSON(input.message);
-    result["tags"] = ToJSON(input.tags);
-    result["related_information"] = ToJSON(input.related_information);
-    result["data"] =  ToJSON(input.data);
+    Set(&result, "message", input.message);
+    Set(&result, "tags", input.tags);
+    Set(&result, "relatedInformation", input.related_information);
+    Set(&result, "data", input.data);
     return result;
 }
 
@@ -337,8 +346,8 @@ struct Command {
 
 JSON ToJSON(const Command& input) {
     JSON result(Json::objectValue);
-    result["title"] = ToJSON(input.title);
-    result["command"] = ToJSON(input.command);
+    Set(&result, "title", input.title);
+    Set(&result, "command", input.command);
     OptionallySet(&result, "arguments", input.arguments);
     return result;
 }
@@ -350,8 +359,8 @@ struct TextEdit {
 
 JSON ToJSON(const TextEdit& input) {
     JSON result(Json::objectValue);
-    result["range"] = ToJSON(input.range);
-    result["new_text"] = ToJSON(input.new_text);
+    Set(&result, "range", input.range);
+    Set(&result, "newText", input.new_text);
     return result;
 }
 
@@ -363,8 +372,8 @@ struct ChangeAnnotation {
 
 JSON ToJSON(const ChangeAnnotation& input) {
     JSON result(Json::objectValue);
-    result["label"] = ToJSON(input.label);
-    OptionallySet(&result, "needs_confirmation", input.needs_confirmation);
+    Set(&result, "label", input.label);
+    OptionallySet(&result, "needsConfirmation", input.needs_confirmation);
     OptionallySet(&result, "description", input.description);
     return result;
 }
@@ -377,7 +386,7 @@ struct TextDocumentIdentifier {
 
 JSON ToJSON(const TextDocumentIdentifier& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
+    Set(&result, "uri", input.uri);
     return result;
 }
 
@@ -390,10 +399,10 @@ struct TextDocumentItem {
 
 JSON ToJSON(const TextDocumentItem& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
-    result["language_id"] = ToJSON(input.language_id);
-    result["version"] = ToJSON(input.version);
-    result["text"] = ToJSON(input.text);
+    Set(&result, "uri", input.uri);
+    Set(&result, "languageId", input.language_id);
+    Set(&result, "version", input.version);
+    Set(&result, "text", input.text);
     return result;
 }
 
@@ -404,7 +413,7 @@ struct VersionedTextDocumentIdentifier {
 
 JSON ToJSON(const VersionedTextDocumentIdentifier& input) {
     JSON result = ToJSON(input.underlying);
-    result["version"] = ToJSON(input.version);
+    Set(&result, "version", input.version);
     return result;
 }
 
@@ -426,7 +435,7 @@ struct AnnotatedTextEdit {
 
 JSON ToJSON(const AnnotatedTextEdit& input) {
     JSON result = ToJSON(input.underlying);
-    result["annotation_id"] = ToJSON(input.annotation_id);
+    Set(&result, "annotationId", input.annotation_id);
     return result;
 }
 
@@ -437,8 +446,8 @@ struct TextDocumentEdit {
 
 JSON ToJSON(const TextDocumentEdit& input) {
     JSON result(Json::objectValue);
-    result["text_document"] = ToJSON(input.text_document);
-    result["edits"] = ToJSON(input.edits);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "edits", input.edits);
     return result;
 }
 
@@ -450,7 +459,7 @@ struct CreateFileOptions {
 JSON ToJSON(const CreateFileOptions& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "overwrite", input.overwrite);
-    OptionallySet(&result, "ignore_if_exists", input.ignore_if_exists);
+    OptionallySet(&result, "ignoreIfExists", input.ignore_if_exists);
     return result;
 }
 
@@ -464,9 +473,9 @@ struct CreateFile {
 JSON ToJSON(const CreateFile& input) {
     JSON result(Json::objectValue);
     result["kind"] = "create";
-    result["uri"] = ToJSON(input.uri);
+    Set(&result, "uri", input.uri);
     OptionallySet(&result, "options", input.options);
-    OptionallySet(&result, "annotation_id", input.annotation_id);
+    OptionallySet(&result, "annotationId", input.annotation_id);
     return result;
 }
 
@@ -478,7 +487,7 @@ struct RenameFileOptions {
 JSON ToJSON(const RenameFileOptions& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "overwrite", input.overwrite);
-    OptionallySet(&result, "ignore_if_exists", input.ignore_if_exists);
+    OptionallySet(&result, "ignoreIfExists", input.ignore_if_exists);
     return result;
 }
 
@@ -493,10 +502,10 @@ struct RenameFile {
 JSON ToJSON(const RenameFile& input) {
     JSON result(Json::objectValue);
     result["kind"] = "rename";
-    result["old_uri"] = ToJSON(input.old_uri);
-    result["new_uri"] = ToJSON(input.new_uri);
+    Set(&result, "oldUri", input.old_uri);
+    Set(&result, "newUri", input.new_uri);
     OptionallySet(&result, "options", input.options);
-    OptionallySet(&result, "annotation_id", input.annotation_id);
+    OptionallySet(&result, "annotationId", input.annotation_id);
     return result;
 }
 
@@ -508,7 +517,7 @@ struct DeleteFileOptions {
 JSON ToJSON(const DeleteFileOptions& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "recursive", input.recursive);
-    OptionallySet(&result, "ignore_if_not_exists", input.ignore_if_not_exists);
+    OptionallySet(&result, "ignoreIfNotExists", input.ignore_if_not_exists);
     return result;
 }
 
@@ -522,9 +531,9 @@ struct DeleteFile {
 JSON ToJSON(const DeleteFile& input) {
     JSON result(Json::objectValue);
     result["kind"] = "delete";
-    result["uri"] = ToJSON(input.uri);
+    Set(&result, "uri", input.uri);
     OptionallySet(&result, "options", input.options);
-    OptionallySet(&result, "annotation_id", input.annotation_id);
+    OptionallySet(&result, "annotationId", input.annotation_id);
     return result;
 }
 
@@ -536,7 +545,9 @@ struct DocumentChangeOperation {
 };
 
 JSON ToJSON(const DocumentChangeOperation& input) {
-    return ToJSON(input.operation);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.operation));
+    return result;
 }
 
 struct DocumentChanges {
@@ -545,7 +556,9 @@ struct DocumentChanges {
 };
 
 JSON ToJSON(const DocumentChanges& input) {
-    return ToJSON(input.changes);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.changes));
+    return result;
 }
 
 struct WorkspaceEdit {
@@ -558,8 +571,8 @@ struct WorkspaceEdit {
 JSON ToJSON(const WorkspaceEdit& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "changes", input.changes);
-    OptionallySet(&result, "document_changes", input.document_changes);
-    OptionallySet(&result, "change_annotations", input.change_annotations);
+    OptionallySet(&result, "documentChanges", input.document_changes);
+    OptionallySet(&result, "changeAnnotations", input.change_annotations);
     return result;
 }
 
@@ -598,7 +611,7 @@ struct ChangeAnnotationSupport {
 
 JSON ToJSON(const ChangeAnnotationSupport& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "groups_on_label", input.groups_on_label);
+    OptionallySet(&result, "groupsOnLabel", input.groups_on_label);
     return result;
 }
 
@@ -612,11 +625,11 @@ struct WorkspaceEditClientCapabilities {
 
 JSON ToJSON(const WorkspaceEditClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "document_changes", input.document_changes);
-    OptionallySet(&result, "resource_operations", input.resource_operations);
-    OptionallySet(&result, "failure_handling", input.failure_handling);
-    OptionallySet(&result, "normalizes_line_endings", input.normalizes_line_endings);
-    OptionallySet(&result, "change_annotation_support", input.change_annotation_support);
+    OptionallySet(&result, "documentChanges", input.document_changes);
+    OptionallySet(&result, "resourceOperations", input.resource_operations);
+    OptionallySet(&result, "failureHandling", input.failure_handling);
+    OptionallySet(&result, "normalizesLineEndings", input.normalizes_line_endings);
+    OptionallySet(&result, "changeAnnotationSupport", input.change_annotation_support);
     return result;
 }
 
@@ -627,8 +640,8 @@ struct TextDocumentPositionParams {
 
 JSON ToJSON(const TextDocumentPositionParams& input) {
     JSON result(Json::objectValue);
-    result["text_document"] = ToJSON(input.text_document);
-    result["position"] = ToJSON(input.position);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "position", input.position);
     return result;
 }
 
@@ -666,9 +679,9 @@ struct TextDocumentRegistrationOptions {
 JSON ToJSON(const TextDocumentRegistrationOptions& input) {
     JSON result(Json::objectValue);
     if (input.document_selector.has_value()) {
-        result["document_selector"] = ToJSON(input.document_selector.value());
+        result["documentSelector"] = ToJSON(input.document_selector.value());
     } else {
-        result["document_selector"] = JSON();
+        result["documentSelector"] = JSON();
     }
     return result;
 }
@@ -693,8 +706,8 @@ struct MarkupContent {
 
 JSON ToJSON(const MarkupContent& input) {
     JSON result(Json::objectValue);
-    result["kind"] = ToJSON(input.kind);
-    result["value"] = ToJSON(input.value);
+    Set(&result, "kind", input.kind);
+    Set(&result, "value", input.value);
     return result;
 }
 
@@ -705,7 +718,7 @@ struct MarkdownClientCapabilities {
 
 JSON ToJSON(const MarkdownClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["parser"] = ToJSON(input.parser);
+    Set(&result, "parser", input.parser);
     OptionallySet(&result, "version", input.version);
     return result;
 }
@@ -723,7 +736,7 @@ struct WorkDoneProgressBegin {
 JSON ToJSON(const WorkDoneProgressBegin& input) {
     JSON result(Json::objectValue);
     result["kind"] = "begin";
-    result["title"] = ToJSON(input.title);
+    Set(&result, "title", input.title);
     OptionallySet(&result, "cancellable", input.cancellable);
     OptionallySet(&result, "message", input.message);
     OptionallySet(&result, "percentage", input.percentage);
@@ -764,7 +777,7 @@ struct WorkDoneProgressParams {
 
 JSON ToJSON(const WorkDoneProgressParams& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "work_done_token", input.work_done_token);
+    OptionallySet(&result, "workDoneToken", input.work_done_token);
     return result;
 }
 
@@ -774,7 +787,7 @@ struct PartialResultParams {
 
 JSON ToJSON(const PartialResultParams& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "partial_result_token", input.partial_result_token);
+    OptionallySet(&result, "partialResultToken", input.partial_result_token);
     return result;
 }
 
@@ -799,7 +812,7 @@ struct ClientInfo {
 
 JSON ToJSON(const ClientInfo& input) {
     JSON result(Json::objectValue);
-    result["name"] = ToJSON(input.name);
+    Set(&result, "name", input.name);
     OptionallySet(&result, "version", input.version);
     return result;
 }
@@ -843,7 +856,7 @@ struct SymbolKindClientCapabilities {
 
 JSON ToJSON(const SymbolKindClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "value_set", input.value_set);
+    OptionallySet(&result, "valueSet", input.value_set);
     return result;
 }
 
@@ -861,7 +874,7 @@ struct SymbolTagSupportClientCapabilities {
 
 JSON ToJSON(const SymbolTagSupportClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "value_set", input.value_set);
+    OptionallySet(&result, "valueSet", input.value_set);
     return result;
 }
 
@@ -874,10 +887,10 @@ struct TextDocumentSyncClientCapabilities {
 
 JSON ToJSON(const TextDocumentSyncClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "will_save", input.will_save);
-    OptionallySet(&result, "will_save_wait_until", input.will_save_wait_until);
-    OptionallySet(&result, "did_save", input.did_save);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "willSave", input.will_save);
+    OptionallySet(&result, "willSaveWaitUntil", input.will_save_wait_until);
+    OptionallySet(&result, "didSave", input.did_save);
     return result;
 }
 
@@ -887,7 +900,7 @@ struct DiagnosticTagSupportClientCapabilities {
 
 JSON ToJSON(const DiagnosticTagSupportClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["value_set"] = ToJSON(input.value_set);
+    Set(&result, "valueSet", input.value_set);
     return result;
 }
 
@@ -901,11 +914,11 @@ struct PublishDiagnosticsClientCapabilities {
 
 JSON ToJSON(const PublishDiagnosticsClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "related_information", input.related_information);
-    OptionallySet(&result, "tag_support", input.tag_support);
-    OptionallySet(&result, "version_support", input.version_support);
-    OptionallySet(&result, "code_description_support", input.code_description_support);
-    OptionallySet(&result, "data_support", input.data_support);
+    OptionallySet(&result, "relatedInformation", input.related_information);
+    OptionallySet(&result, "tagSupport", input.tag_support);
+    OptionallySet(&result, "versionSupport", input.version_support);
+    OptionallySet(&result, "codeDescriptionSupport", input.code_description_support);
+    OptionallySet(&result, "dataSupport", input.data_support);
     return result;
 }
 
@@ -923,7 +936,7 @@ struct CompletionItemTagSupportClientCapabilities {
 
 JSON ToJSON(const CompletionItemTagSupportClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["value_set"] = ToJSON(input.value_set);
+    Set(&result, "valueSet", input.value_set);
     return result;
 }
 
@@ -933,7 +946,7 @@ struct CompletionItemResolveSupportClientCapabilities {
 
 JSON ToJSON(const CompletionItemResolveSupportClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["properties"] = ToJSON(input.properties);
+    Set(&result, "properties", input.properties);
     return result;
 }
 
@@ -951,7 +964,7 @@ struct CompletionItemInsertTextModeSupportClientCapabilities {
 
 JSON ToJSON(const CompletionItemInsertTextModeSupportClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["value_set"] = ToJSON(input.value_set);
+    Set(&result, "valueSet", input.value_set);
     return result;
 }
 
@@ -970,16 +983,16 @@ struct CompletionItemClientCapabilities {
 
 JSON ToJSON(const CompletionItemClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "snippet_support", input.snippet_support);
-    OptionallySet(&result, "commit_characters_support", input.commit_characters_support);
-    OptionallySet(&result, "documentation_format", input.documentation_format);
-    OptionallySet(&result, "deprecated_support", input.deprecated_support);
-    OptionallySet(&result, "preselect_support", input.preselect_support);
-    OptionallySet(&result, "tag_support", input.tag_support);
-    OptionallySet(&result, "insert_replace_support", input.insert_replace_support);
-    OptionallySet(&result, "resolve_support", input.resolve_support);
-    OptionallySet(&result, "insert_text_mode_support", input.insert_text_mode_support);
-    OptionallySet(&result, "label_details_support", input.label_details_support);
+    OptionallySet(&result, "snippetSupport", input.snippet_support);
+    OptionallySet(&result, "commitCharactersSupport", input.commit_characters_support);
+    OptionallySet(&result, "documentationFormat", input.documentation_format);
+    OptionallySet(&result, "deprecatedSupport", input.deprecated_support);
+    OptionallySet(&result, "preselectSupport", input.preselect_support);
+    OptionallySet(&result, "tagSupport", input.tag_support);
+    OptionallySet(&result, "insertReplaceSupport", input.insert_replace_support);
+    OptionallySet(&result, "resolveSupport", input.resolve_support);
+    OptionallySet(&result, "insertTextModeSupport", input.insert_text_mode_support);
+    OptionallySet(&result, "labelDetailsSupport", input.label_details_support);
     return result;
 }
 
@@ -1021,7 +1034,7 @@ struct CompletionItemKindClientCapabilities {
 
 JSON ToJSON(const CompletionItemKindClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "value_set", input.value_set);
+    OptionallySet(&result, "valueSet", input.value_set);
     return result;
 }
 
@@ -1035,11 +1048,11 @@ struct CompletionClientCapabilities {
 
 JSON ToJSON(const CompletionClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "completion_item", input.completion_item);
-    OptionallySet(&result, "completion_item_kind", input.completion_item_kind);
-    OptionallySet(&result, "context_support", input.context_support);
-    OptionallySet(&result, "insert_text_mode", input.insert_text_mode);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "completionItem", input.completion_item);
+    OptionallySet(&result, "completionItemKind", input.completion_item_kind);
+    OptionallySet(&result, "contextSupport", input.context_support);
+    OptionallySet(&result, "insertTextMode", input.insert_text_mode);
     return result;
 }
 
@@ -1050,8 +1063,8 @@ struct HoverClientCapabilities {
 
 JSON ToJSON(const HoverClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "content_format", input.content_format);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "contentFormat", input.content_format);
     return result;
 }
 
@@ -1061,7 +1074,7 @@ struct ParameterInformationClientCapabilities {
 
 JSON ToJSON(const ParameterInformationClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "label_offset_support", input.label_offset_support);
+    OptionallySet(&result, "labelOffsetSupport", input.label_offset_support);
     return result;
 }
 
@@ -1073,9 +1086,9 @@ struct SignatureInformationClientCapabilities {
 
 JSON ToJSON(const SignatureInformationClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "documentation_format", input.documentation_format);
-    OptionallySet(&result, "parameter_information", input.parameter_information);
-    OptionallySet(&result, "active_parameter_support", input.active_parameter_support);
+    OptionallySet(&result, "documentationFormat", input.documentation_format);
+    OptionallySet(&result, "parameterInformation", input.parameter_information);
+    OptionallySet(&result, "activeParameterSupport", input.active_parameter_support);
     return result;
 }
 
@@ -1087,9 +1100,9 @@ struct SignatureHelpClientCapabilities {
 
 JSON ToJSON(const SignatureHelpClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "signature_information", input.signature_information);
-    OptionallySet(&result, "context_support", input.context_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "signatureInformation", input.signature_information);
+    OptionallySet(&result, "contextSupport", input.context_support);
     return result;
 }
 
@@ -1100,8 +1113,8 @@ struct DeclarationClientCapabilities {
 
 JSON ToJSON(const DeclarationClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "link_support", input.link_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "linkSupport", input.link_support);
     return result;
 }
 
@@ -1112,8 +1125,8 @@ struct DefinitionClientCapabilities {
 
 JSON ToJSON(const DefinitionClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "link_support", input.link_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "linkSupport", input.link_support);
     return result;
 }
 
@@ -1124,8 +1137,8 @@ struct TypeDefinitionClientCapabilities {
 
 JSON ToJSON(const TypeDefinitionClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "link_support", input.link_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "linkSupport", input.link_support);
     return result;
 }
 
@@ -1136,8 +1149,8 @@ struct ImplementationClientCapabilities {
 
 JSON ToJSON(const ImplementationClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "link_support", input.link_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "linkSupport", input.link_support);
     return result;
 }
 
@@ -1147,7 +1160,7 @@ struct ReferenceClientCapabilities {
 
 JSON ToJSON(const ReferenceClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1157,7 +1170,7 @@ struct DocumentHighlightClientCapabilities {
 
 JSON ToJSON(const DocumentHighlightClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1171,11 +1184,11 @@ struct DocumentSymbolClientCapabilities {
 
 JSON ToJSON(const DocumentSymbolClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "symbol_kind", input.symbol_kind);
-    OptionallySet(&result, "hierarchical_document_symbol_support", input.hierarchical_document_symbol_support);
-    OptionallySet(&result, "tag_support", input.tag_support);
-    OptionallySet(&result, "label_support", input.label_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "symbolKind", input.symbol_kind);
+    OptionallySet(&result, "hierarchicalDocumentSymbolSupport", input.hierarchical_document_symbol_support);
+    OptionallySet(&result, "tagSupport", input.tag_support);
+    OptionallySet(&result, "labelSupport", input.label_support);
     return result;
 }
 
@@ -1213,7 +1226,7 @@ struct CodeActionKindClientCapabilities {
 
 JSON ToJSON(const CodeActionKindClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["value_set"] = ToJSON(input.value_set);
+    Set(&result, "valueSet", input.value_set);
     return result;
 }
 
@@ -1223,7 +1236,7 @@ struct CodeActionLiteralClientCapabilities {
 
 JSON ToJSON(const CodeActionLiteralClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["code_action_kind"] = ToJSON(input.code_action_kind);
+    Set(&result, "codeActionKind", input.code_action_kind);
     return result;
 }
 
@@ -1233,7 +1246,7 @@ struct CodeActionResolveClientCapabilities {
 
 JSON ToJSON(const CodeActionResolveClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["properties"] = ToJSON(input.properties);
+    Set(&result, "properties", input.properties);
     return result;
 }
 
@@ -1249,13 +1262,13 @@ struct CodeActionClientCapabilities {
 
 JSON ToJSON(const CodeActionClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "code_action_literal_support", input.code_action_literal_support);
-    OptionallySet(&result, "is_preferred_support", input.is_preferred_support);
-    OptionallySet(&result, "disabled_support", input.disabled_support);
-    OptionallySet(&result, "data_support", input.data_support);
-    OptionallySet(&result, "resolve_support", input.resolve_support);
-    OptionallySet(&result, "honors_change_annotations", input.honors_change_annotations);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "codeActionLiteralSupport", input.code_action_literal_support);
+    OptionallySet(&result, "isPreferredSupport", input.is_preferred_support);
+    OptionallySet(&result, "disabledSupport", input.disabled_support);
+    OptionallySet(&result, "dataSupport", input.data_support);
+    OptionallySet(&result, "resolveSupport", input.resolve_support);
+    OptionallySet(&result, "honorsChangeAnnotations", input.honors_change_annotations);
     return result;
 }
 
@@ -1265,7 +1278,7 @@ struct CodeLensClientCapabilities {
 
 JSON ToJSON(const CodeLensClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1276,8 +1289,8 @@ struct DocumentLinkClientCapabilities {
 
 JSON ToJSON(const DocumentLinkClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "tooltip_support", input.tooltip_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "tooltipSupport", input.tooltip_support);
     return result;
 }
 
@@ -1287,7 +1300,7 @@ struct DocumentColorClientCapabilities {
 
 JSON ToJSON(const DocumentColorClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1297,7 +1310,7 @@ struct DocumentFormattingClientCapabilities {
 
 JSON ToJSON(const DocumentFormattingClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1307,7 +1320,7 @@ struct DocumentRangeFormattingClientCapabilities {
 
 JSON ToJSON(const DocumentRangeFormattingClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1317,7 +1330,7 @@ struct DocumentOnTypeFormattingClientCapabilities {
 
 JSON ToJSON(const DocumentOnTypeFormattingClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1338,10 +1351,10 @@ struct RenameClientCapabilities {
 
 JSON ToJSON(const RenameClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "prepare_support", input.prepare_support);
-    OptionallySet(&result, "prepare_support_default_behavior", input.prepare_support_default_behavior);
-    OptionallySet(&result, "honors_change_annotations", input.honors_change_annotations);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "prepareSupport", input.prepare_support);
+    OptionallySet(&result, "prepareSupportDefaultBehavior", input.prepare_support_default_behavior);
+    OptionallySet(&result, "honorsChangeAnnotations", input.honors_change_annotations);
     return result;
 }
 
@@ -1353,9 +1366,9 @@ struct FoldingRangeClientCapabilities {
 
 JSON ToJSON(const FoldingRangeClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "range_limit", input.range_limit);
-    OptionallySet(&result, "line_folding_only", input.line_folding_only);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "rangeLimit", input.range_limit);
+    OptionallySet(&result, "lineFoldingOnly", input.line_folding_only);
     return result;
 }
 
@@ -1365,7 +1378,7 @@ struct SelectionRangeClientCapabilities {
 
 JSON ToJSON(const SelectionRangeClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1375,7 +1388,7 @@ struct CallHierarchyClientCapabilities {
 
 JSON ToJSON(const CallHierarchyClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1421,16 +1434,16 @@ struct SemanticTokensClientCapabilities {
 
 JSON ToJSON(const SemanticTokensClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     JSON requests(Json::objectValue);
     OptionallySet(&requests, "range", input.requests_range);
     OptionallySet(&requests, "full", input.requests_full);
     result["requests"] = requests;
-    result["token_types"] = ToJSON(input.token_types);
-    result["token_modifiers"] = ToJSON(input.token_modifiers);
-    result["formats"] = ToJSON(input.formats);
-    OptionallySet(&result, "overlapping_token_support", input.overlapping_token_support);
-    OptionallySet(&result, "multiline_token_support", input.multiline_token_support);
+    Set(&result, "tokenTypes", input.token_types);
+    Set(&result, "tokenModifiers", input.token_modifiers);
+    Set(&result, "formats", input.formats);
+    OptionallySet(&result, "overlappingTokenSupport", input.overlapping_token_support);
+    OptionallySet(&result, "multilineTokenSupport", input.multiline_token_support);
     return result;
 }
 
@@ -1440,7 +1453,7 @@ struct LinkedEditingRangeClientCapabilities {
 
 JSON ToJSON(const LinkedEditingRangeClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1450,7 +1463,7 @@ struct MonikerClientCapabilities {
 
 JSON ToJSON(const MonikerClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1488,28 +1501,28 @@ JSON ToJSON(const TextDocumentClientCapabilities& input) {
     OptionallySet(&result, "synchronization", input.synchronization);
     OptionallySet(&result, "completion", input.completion);
     OptionallySet(&result, "hover", input.hover);
-    OptionallySet(&result, "signature_help", input.signature_help);
+    OptionallySet(&result, "signatureHelp", input.signature_help);
     OptionallySet(&result, "declaration", input.declaration);
     OptionallySet(&result, "definition", input.definition);
-    OptionallySet(&result, "type_definition", input.type_definition);
+    OptionallySet(&result, "typeDefinition", input.type_definition);
     OptionallySet(&result, "implementation", input.implementation);
     OptionallySet(&result, "references", input.references);
-    OptionallySet(&result, "document_highlight", input.document_highlight);
-    OptionallySet(&result, "document_symbol", input.document_symbol);
-    OptionallySet(&result, "code_action", input.code_action);
-    OptionallySet(&result, "code_lens", input.code_lens);
-    OptionallySet(&result, "document_link", input.document_link);
-    OptionallySet(&result, "color_provider", input.color_provider);
+    OptionallySet(&result, "documentHighlight", input.document_highlight);
+    OptionallySet(&result, "documentSymbol", input.document_symbol);
+    OptionallySet(&result, "codeAction", input.code_action);
+    OptionallySet(&result, "codeLens", input.code_lens);
+    OptionallySet(&result, "documentLink", input.document_link);
+    OptionallySet(&result, "colorProvider", input.color_provider);
     OptionallySet(&result, "formatting", input.formatting);
-    OptionallySet(&result, "range_formatting", input.range_formatting);
-    OptionallySet(&result, "on_type_formatting", input.on_type_formatting);
+    OptionallySet(&result, "rangeFormatting", input.range_formatting);
+    OptionallySet(&result, "onTypeFormatting", input.on_type_formatting);
     OptionallySet(&result, "rename", input.rename);
-    OptionallySet(&result, "publish_diagnostics", input.publish_diagnostics);
-    OptionallySet(&result, "folding_range", input.folding_range);
-    OptionallySet(&result, "selection_range", input.selection_range);
-    OptionallySet(&result, "linked_editing_range", input.linked_editing_range);
-    OptionallySet(&result, "call_hierarchy", input.call_hierarchy);
-    OptionallySet(&result, "semantic_tokens", input.semantic_tokens);
+    OptionallySet(&result, "publishDiagnostics", input.publish_diagnostics);
+    OptionallySet(&result, "foldingRange", input.folding_range);
+    OptionallySet(&result, "selectionRange", input.selection_range);
+    OptionallySet(&result, "linkedEditingRange", input.linked_editing_range);
+    OptionallySet(&result, "callHierarchy", input.call_hierarchy);
+    OptionallySet(&result, "semanticTokens", input.semantic_tokens);
     OptionallySet(&result, "moniker", input.moniker);
     return result;
 }
@@ -1526,13 +1539,13 @@ struct FileOperationsWorkspaceClientCapabilities {
 
 JSON ToJSON(const FileOperationsWorkspaceClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "did_create", input.did_create);
-    OptionallySet(&result, "will_create", input.will_create);
-    OptionallySet(&result, "did_rename", input.did_rename);
-    OptionallySet(&result, "will_rename", input.will_rename);
-    OptionallySet(&result, "did_delete", input.did_delete);
-    OptionallySet(&result, "will_delete", input.will_delete);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "didCreate", input.did_create);
+    OptionallySet(&result, "willCreate", input.will_create);
+    OptionallySet(&result, "didRename", input.did_rename);
+    OptionallySet(&result, "willRename", input.will_rename);
+    OptionallySet(&result, "didDelete", input.did_delete);
+    OptionallySet(&result, "willDelete", input.will_delete);
     return result;
 }
 
@@ -1542,7 +1555,7 @@ struct DidChangeConfigurationClientCapabilities {
 
 JSON ToJSON(const DidChangeConfigurationClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1552,7 +1565,7 @@ struct DidChangeWatchedFilesClientCapabilities {
 
 JSON ToJSON(const DidChangeWatchedFilesClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1564,9 +1577,9 @@ struct WorkspaceSymbolClientCapabilities {
 
 JSON ToJSON(const WorkspaceSymbolClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
-    OptionallySet(&result, "symbol_kind", input.symbol_kind);
-    OptionallySet(&result, "tag_support", input.tag_support);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
+    OptionallySet(&result, "symbolKind", input.symbol_kind);
+    OptionallySet(&result, "tagSupport", input.tag_support);
     return result;
 }
 
@@ -1576,7 +1589,7 @@ struct ExecuteCommandClientCapabilities {
 
 JSON ToJSON(const ExecuteCommandClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "dynamic_registration", input.dynamic_registration);
+    OptionallySet(&result, "dynamicRegistration", input.dynamic_registration);
     return result;
 }
 
@@ -1586,7 +1599,7 @@ struct CodeLensWorkspaceClientCapabilities {
 
 JSON ToJSON(const CodeLensWorkspaceClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "refresh_support", input.refresh_support);
+    OptionallySet(&result, "refreshSupport", input.refresh_support);
     return result;
 }
 
@@ -1596,7 +1609,7 @@ struct SemanticTokensWorkspaceClientCapabilities {
 
 JSON ToJSON(const SemanticTokensWorkspaceClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "refresh_support", input.refresh_support);
+    OptionallySet(&result, "refreshSupport", input.refresh_support);
     return result;
 }
 
@@ -1616,17 +1629,17 @@ struct WorkspaceSpecificClientCapabilities {
 
 JSON ToJSON(const WorkspaceSpecificClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "apply_edit", input.apply_edit);
-    OptionallySet(&result, "workspace_edit", input.workspace_edit);
-    OptionallySet(&result, "did_change_configuration", input.did_change_configuration);
-    OptionallySet(&result, "did_change_watched_files", input.did_change_watched_files);
+    OptionallySet(&result, "applyEdit", input.apply_edit);
+    OptionallySet(&result, "workspaceEdit", input.workspace_edit);
+    OptionallySet(&result, "didChangeConfiguration", input.did_change_configuration);
+    OptionallySet(&result, "didChangeWatchedFiles", input.did_change_watched_files);
     OptionallySet(&result, "symbol", input.symbol);
-    OptionallySet(&result, "execute_command", input.execute_command);
-    OptionallySet(&result, "workspace_folders", input.workspace_folders);
+    OptionallySet(&result, "executeCommand", input.execute_command);
+    OptionallySet(&result, "workspaceFolders", input.workspace_folders);
     OptionallySet(&result, "configuration", input.configuration);
-    OptionallySet(&result, "semantic_tokens", input.semantic_tokens);
-    OptionallySet(&result, "code_lens", input.code_lens);
-    OptionallySet(&result, "file_operations", input.file_operations);
+    OptionallySet(&result, "semanticTokens", input.semantic_tokens);
+    OptionallySet(&result, "codeLens", input.code_lens);
+    OptionallySet(&result, "fileOperations", input.file_operations);
     return result;
 }
 
@@ -1636,7 +1649,7 @@ struct MessageActionItemClientCapabilities {
 
 JSON ToJSON(const MessageActionItemClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "additional_properties_support", input.additional_properties_support);
+    OptionallySet(&result, "additionalPropertiesSupport", input.additional_properties_support);
     return result;
 }
 
@@ -1646,7 +1659,7 @@ struct ShowMessageRequestClientCapabilities {
 
 JSON ToJSON(const ShowMessageRequestClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "message_action_item", input.message_action_item);
+    OptionallySet(&result, "messageActionItem", input.message_action_item);
     return result;
 }
 
@@ -1656,7 +1669,7 @@ struct ShowDocumentClientCapabilities {
 
 JSON ToJSON(const ShowDocumentClientCapabilities& input) {
     JSON result(Json::objectValue);
-    result["support"] = ToJSON(input.support);
+    Set(&result, "support", input.support);
     return result;
 }
 
@@ -1668,9 +1681,9 @@ struct WindowSpecificClientCapabilities {
 
 JSON ToJSON(const WindowSpecificClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "work_done_progress", input.work_done_progress);
-    OptionallySet(&result, "show_message", input.show_message);
-    OptionallySet(&result, "show_document", input.show_document);
+    OptionallySet(&result, "workDoneProgress", input.work_done_progress);
+    OptionallySet(&result, "showMessage", input.show_message);
+    OptionallySet(&result, "showDocument", input.show_document);
     return result;
 }
 
@@ -1681,7 +1694,7 @@ struct GeneralClientCapabilities {
 
 JSON ToJSON(const GeneralClientCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "regular_expressions", input.regular_expressions);
+    OptionallySet(&result, "regularExpressions", input.regular_expressions);
     OptionallySet(&result, "markdown", input.markdown);
     return result;
 }
@@ -1697,7 +1710,7 @@ struct ClientCapabilities {
 JSON ToJSON(const ClientCapabilities& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "workspace", input.workspace);
-    OptionallySet(&result, "text_document", input.text_document);
+    OptionallySet(&result, "textDocument", input.text_document);
     OptionallySet(&result, "window", input.window);
     OptionallySet(&result, "general", input.general);
     OptionallySet(&result, "experimental", input.experimental);
@@ -1723,7 +1736,7 @@ struct FileOperationPatternOptions {
 
 JSON ToJSON(const FileOperationPatternOptions& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "ignore_case", input.ignore_case);
+    OptionallySet(&result, "ignoreCase", input.ignore_case);
     return result;
 }
 
@@ -1735,7 +1748,7 @@ struct FileOperationPattern {
 
 JSON ToJSON(const FileOperationPattern& input) {
     JSON result(Json::objectValue);
-    result["glob"] = ToJSON(input.glob);
+    Set(&result, "glob", input.glob);
     OptionallySet(&result, "matches", input.matches);
     OptionallySet(&result, "options", input.options);
     return result;
@@ -1749,7 +1762,7 @@ struct FileOperationFilter {
 JSON ToJSON(const FileOperationFilter& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "scheme", input.scheme);
-    result["pattern"] = ToJSON(input.pattern);
+    Set(&result, "pattern", input.pattern);
     return result;
 }
 
@@ -1759,7 +1772,7 @@ struct FileOperationRegistrationOptions {
 
 JSON ToJSON(const FileOperationRegistrationOptions& input) {
     JSON result(Json::objectValue);
-    result["filters"] = ToJSON(input.filters);
+    Set(&result, "filters", input.filters);
     return result;
 }
 
@@ -1774,12 +1787,12 @@ struct FileOperationsWorkspaceServerCapabilities {
 
 JSON ToJSON(const FileOperationsWorkspaceServerCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "did_create", input.did_create);
-    OptionallySet(&result, "will_create", input.will_create);
-    OptionallySet(&result, "did_rename", input.did_rename);
-    OptionallySet(&result, "will_rename", input.will_rename);
-    OptionallySet(&result, "did_delete", input.did_delete);
-    OptionallySet(&result, "will_delete", input.will_delete);
+    OptionallySet(&result, "didCreate", input.did_create);
+    OptionallySet(&result, "willCreate", input.will_create);
+    OptionallySet(&result, "didRename", input.did_rename);
+    OptionallySet(&result, "willRename", input.will_rename);
+    OptionallySet(&result, "didDelete", input.did_delete);
+    OptionallySet(&result, "willDelete", input.will_delete);
     return result;
 }
 
@@ -1791,7 +1804,7 @@ struct WorkspaceFoldersServerCapabilities {
 JSON ToJSON(const WorkspaceFoldersServerCapabilities& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "supported", input.supported);
-    OptionallySet(&result, "change_notifications", input.change_notifications);
+    OptionallySet(&result, "changeNotifications", input.change_notifications);
     return result;
 }
 
@@ -1802,8 +1815,8 @@ struct WorkspaceSpecificServerCapabilities {
 
 JSON ToJSON(const WorkspaceSpecificServerCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "workspace_folders", input.workspace_folders);
-    OptionallySet(&result, "file_operations", input.file_operations);
+    OptionallySet(&result, "workspaceFolders", input.workspace_folders);
+    OptionallySet(&result, "fileOperations", input.file_operations);
     return result;
 }
 
@@ -1824,7 +1837,7 @@ struct FileSystemWatcher {
 
 JSON ToJSON(const FileSystemWatcher& input) {
     JSON result(Json::objectValue);
-    result["glob_pattern"] = ToJSON(input.glob_pattern);
+    Set(&result, "globPattern", input.glob_pattern);
     OptionallySet(&result, "kind", input.kind);
     return result;
 }
@@ -1835,7 +1848,7 @@ struct DidChangeWatchedFilesRegistrationOptions {
 
 JSON ToJSON(const DidChangeWatchedFilesRegistrationOptions& input) {
     JSON result(Json::objectValue);
-    result["watchers"] = ToJSON(input.watchers);
+    Set(&result, "watchers", input.watchers);
     return result;
 }
 
@@ -1845,7 +1858,7 @@ struct WorkDoneProgressOptions {
 
 JSON ToJSON(const WorkDoneProgressOptions& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "work_done_progress", input.work_done_progress);
+    OptionallySet(&result, "workDoneProgress", input.work_done_progress);
     return result;
 }
 
@@ -1877,7 +1890,7 @@ struct ExecuteCommandOptions {
 JSON ToJSON(const ExecuteCommandOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_work_done_progress));
-    result["commands"] = ToJSON(input.commands);
+    Set(&result, "commands", input.commands);
     return result;
 }
 
@@ -1905,7 +1918,7 @@ struct SaveOptions {
 
 JSON ToJSON(const SaveOptions& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "include_text", input.include_text);
+    OptionallySet(&result, "includeText", input.include_text);
     return result;
 }
 
@@ -1919,10 +1932,10 @@ struct TextDocumentSyncOptions {
 
 JSON ToJSON(const TextDocumentSyncOptions& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "open_close", input.open_close);
+    OptionallySet(&result, "openClose", input.open_close);
     OptionallySet(&result, "change", input.change);
-    OptionallySet(&result, "will_save", input.will_save);
-    OptionallySet(&result, "will_save_wait_until", input.will_save_wait_until);
+    OptionallySet(&result, "willSave", input.will_save);
+    OptionallySet(&result, "willSaveWaitUntil", input.will_save_wait_until);
     OptionallySet(&result, "save", input.save);
     return result;
 }
@@ -1933,7 +1946,7 @@ struct CompletionItemOptions {
 
 JSON ToJSON(const CompletionItemOptions& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "label_details_support", input.label_details_support);
+    OptionallySet(&result, "labelDetailsSupport", input.label_details_support);
     return result;
 }
 
@@ -1948,10 +1961,10 @@ struct CompletionOptions {
 JSON ToJSON(const CompletionOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
-    OptionallySet(&result, "trigger_characters", input.trigger_characters);
-    OptionallySet(&result, "all_commit_characters", input.all_commit_characters);
-    OptionallySet(&result, "resolve_provider", input.resolve_provider);
-    OptionallySet(&result, "completion_item", input.completion_item);
+    OptionallySet(&result, "triggerCharacters", input.trigger_characters);
+    OptionallySet(&result, "allCommitCharacters", input.all_commit_characters);
+    OptionallySet(&result, "resolveProvider", input.resolve_provider);
+    OptionallySet(&result, "completionItem", input.completion_item);
     return result;
 }
 
@@ -1998,8 +2011,8 @@ struct SignatureHelpOptions {
 JSON ToJSON(const SignatureHelpOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
-    OptionallySet(&result, "trigger_characters", input.trigger_characters);
-    OptionallySet(&result, "retrigger_characters", input.retrigger_characters);
+    OptionallySet(&result, "triggerCharacters", input.trigger_characters);
+    OptionallySet(&result, "retriggerCharacters", input.retrigger_characters);
     return result;
 }
 
@@ -2186,8 +2199,8 @@ struct CodeActionOptions {
 JSON ToJSON(const CodeActionOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
-    OptionallySet(&result, "code_action_kinds", input.code_action_kinds);
-    OptionallySet(&result, "resolve_provider", input.resolve_provider);
+    OptionallySet(&result, "codeActionKinds", input.code_action_kinds);
+    OptionallySet(&result, "resolveProvider", input.resolve_provider);
     return result;
 }
 
@@ -2211,7 +2224,7 @@ struct CodeLensOptions {
 JSON ToJSON(const CodeLensOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
-    OptionallySet(&result, "resolve_provider", input.resolve_provider);
+    OptionallySet(&result, "resolveProvider", input.resolve_provider);
     return result;
 }
 
@@ -2235,7 +2248,7 @@ struct DocumentLinkOptions {
 JSON ToJSON(const DocumentLinkOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
-    OptionallySet(&result, "resolve_provider", input.resolve_provider);
+    OptionallySet(&result, "resolveProvider", input.resolve_provider);
     return result;
 }
 
@@ -2326,8 +2339,8 @@ struct DocumentOnTypeFormattingOptions {
 
 JSON ToJSON(const DocumentOnTypeFormattingOptions& input) {
     JSON result(Json::objectValue);
-    result["first_trigger_character"] = ToJSON(input.first_trigger_character);
-    OptionallySet(&result, "more_trigger_character", input.more_trigger_character);
+    Set(&result, "firstTriggerCharacter", input.first_trigger_character);
+    OptionallySet(&result, "moreTriggerCharacter", input.more_trigger_character);
     return result;
 }
 
@@ -2351,7 +2364,7 @@ struct RenameOptions {
 JSON ToJSON(const RenameOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
-    OptionallySet(&result, "prepare_provider", input.prepare_provider);
+    OptionallySet(&result, "prepareProvider", input.prepare_provider);
     return result;
 }
 
@@ -2446,8 +2459,8 @@ struct SemanticTokensLegend {
 
 JSON ToJSON(const SemanticTokensLegend& input) {
     JSON result(Json::objectValue);
-    result["token_types"] = ToJSON(input.token_types);
-    result["token_modifiers"] = ToJSON(input.token_modifiers);
+    Set(&result, "tokenTypes", input.token_types);
+    Set(&result, "tokenModifiers", input.token_modifiers);
     return result;
 }
 
@@ -2479,7 +2492,7 @@ struct SemanticTokensOptions {
 JSON ToJSON(const SemanticTokensOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
-    result["legend"] = ToJSON(input.legend);
+    Set(&result, "legend", input.legend);
     OptionallySet(&result, "range", input.range);
     OptionallySet(&result, "full", input.full);
     return result;
@@ -2579,33 +2592,33 @@ struct ServerCapabilities {
 
 JSON ToJSON(const ServerCapabilities& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "text_document_sync", input.text_document_sync);
-    OptionallySet(&result, "completion_provider", input.completion_provider);
-    OptionallySet(&result, "hover_provider", input.hover_provider);
-    OptionallySet(&result, "signature_help_provider", input.signature_help_provider);
-    OptionallySet(&result, "declaration_provider", input.declaration_provider);
-    OptionallySet(&result, "definition_provider", input.definition_provider);
-    OptionallySet(&result, "type_definition_provider", input.type_definition_provider);
-    OptionallySet(&result, "implementation_provider", input.implementation_provider);
-    OptionallySet(&result, "references_provider", input.references_provider);
-    OptionallySet(&result, "document_highlight_provider", input.document_highlight_provider);
-    OptionallySet(&result, "document_symbol_provider", input.document_symbol_provider);
-    OptionallySet(&result, "code_action_provider", input.code_action_provider);
-    OptionallySet(&result, "code_lens_provider", input.code_lens_provider);
-    OptionallySet(&result, "document_link_provider", input.document_link_provider);
-    OptionallySet(&result, "color_provider", input.color_provider);
-    OptionallySet(&result, "document_formatting_provider", input.document_formatting_provider);
-    OptionallySet(&result, "document_range_formatting_provider", input.document_range_formatting_provider);
-    OptionallySet(&result, "document_on_type_formatting_provider", input.document_on_type_formatting_provider);
-    OptionallySet(&result, "rename_provider", input.rename_provider);
-    OptionallySet(&result, "folding_range_provider", input.folding_range_provider);
-    OptionallySet(&result, "execute_command_provider", input.execute_command_provider);
-    OptionallySet(&result, "selection_range_provider", input.selection_range_provider);
-    OptionallySet(&result, "linked_editing_range_provider", input.linked_editing_range_provider);
-    OptionallySet(&result, "call_hierarchy_provider", input.call_hierarchy_provider);
-    OptionallySet(&result, "semantic_tokens_provider", input.semantic_tokens_provider);
-    OptionallySet(&result, "moniker_provider", input.moniker_provider);
-    OptionallySet(&result, "workspace_symbol_provider", input.workspace_symbol_provider);
+    OptionallySet(&result, "textDocumentSync", input.text_document_sync);
+    OptionallySet(&result, "completionProvider", input.completion_provider);
+    OptionallySet(&result, "hoverProvider", input.hover_provider);
+    OptionallySet(&result, "signatureHelpProvider", input.signature_help_provider);
+    OptionallySet(&result, "declarationProvider", input.declaration_provider);
+    OptionallySet(&result, "definitionProvider", input.definition_provider);
+    OptionallySet(&result, "typeDefinitionProvider", input.type_definition_provider);
+    OptionallySet(&result, "implementationProvider", input.implementation_provider);
+    OptionallySet(&result, "referencesProvider", input.references_provider);
+    OptionallySet(&result, "documentHighlightProvider", input.document_highlight_provider);
+    OptionallySet(&result, "documentSymbolProvider", input.document_symbol_provider);
+    OptionallySet(&result, "codeActionProvider", input.code_action_provider);
+    OptionallySet(&result, "codeLensProvider", input.code_lens_provider);
+    OptionallySet(&result, "documentLinkProvider", input.document_link_provider);
+    OptionallySet(&result, "colorProvider", input.color_provider);
+    OptionallySet(&result, "documentFormattingProvider", input.document_formatting_provider);
+    OptionallySet(&result, "documentRangeFormattingProvider", input.document_range_formatting_provider);
+    OptionallySet(&result, "documentOnTypeFormattingProvider", input.document_on_type_formatting_provider);
+    OptionallySet(&result, "renameProvider", input.rename_provider);
+    OptionallySet(&result, "foldingRangeProvider", input.folding_range_provider);
+    OptionallySet(&result, "executeCommandProvider", input.execute_command_provider);
+    OptionallySet(&result, "selectionRangeProvider", input.selection_range_provider);
+    OptionallySet(&result, "linkedEditingRangeProvider", input.linked_editing_range_provider);
+    OptionallySet(&result, "callHierarchyProvider", input.call_hierarchy_provider);
+    OptionallySet(&result, "semanticTokensProvider", input.semantic_tokens_provider);
+    OptionallySet(&result, "monikerProvider", input.moniker_provider);
+    OptionallySet(&result, "workspaceSymbolProvider", input.workspace_symbol_provider);
     OptionallySet(&result, "workspace", input.workspace);
     return result;
 }
@@ -2617,7 +2630,7 @@ struct ServerInfo {
 
 JSON ToJSON(const ServerInfo& input) {
     JSON result(Json::objectValue);
-    result["name"] = ToJSON(input.name);
+    Set(&result, "name", input.name);
     OptionallySet(&result, "version", input.version);
     return result;
 }
@@ -2631,8 +2644,8 @@ struct WorkspaceFolder {
 
 JSON ToJSON(const WorkspaceFolder& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
-    result["name"] = ToJSON(input.name);
+    Set(&result, "uri", input.uri);
+    Set(&result, "name", input.name);
     return result;
 }
 
@@ -2654,18 +2667,18 @@ JSON ToJSON(const InitializeParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpo));
     if (input.process_id.has_value()) {
-        result["process_id"] = ToJSON(input.process_id.value());
+        result["processId"] = ToJSON(input.process_id.value());
     } else {
-        result["process_id"] = JSON();
+        result["processId"] = JSON();
     }
-    OptionallySet(&result, "client_info", input.client_info);
+    OptionallySet(&result, "clientInfo", input.client_info);
     OptionallySet(&result, "locale", input.locale);
-    OptionallySet(&result, "root_path", input.root_path);
-    OptionallySet(&result, "root_uri", input.root_uri);
-    OptionallySet(&result, "initialization_options", input.initialization_options);
-    result["capabilities"] = ToJSON(input.capabilities);
+    OptionallySet(&result, "rootPath", input.root_path);
+    OptionallySet(&result, "rootUri", input.root_uri);
+    OptionallySet(&result, "initializationOptions", input.initialization_options);
+    Set(&result, "capabilities", input.capabilities);
     OptionallySet(&result, "trace", input.trace);
-    OptionallySet(&result, "workspace_folders", input.workspace_folders);
+    OptionallySet(&result, "workspaceFolders", input.workspace_folders);
     return result;
 }
 
@@ -2676,8 +2689,8 @@ struct InitializeResult {
 
 JSON ToJSON(const InitializeResult& input) {
     JSON result(Json::objectValue);
-    result["capabilities"] = ToJSON(input.capabilities);
-    OptionallySet(&result, "server_info", input.server_info);
+    Set(&result, "capabilities", input.capabilities);
+    OptionallySet(&result, "serverInfo", input.server_info);
     return result;
 }
 
@@ -2695,7 +2708,7 @@ struct InitializeErrorData {
 
 JSON ToJSON(const InitializeErrorData& input) {
     JSON result(Json::objectValue);
-    result["retry"] = ToJSON(input.retry);
+    Set(&result, "retry", input.retry);
     return result;
 }
 
@@ -2710,8 +2723,8 @@ struct ProgressParams {
 template<typename T>
 JSON ToJSON(const ProgressParams<T>& input) {
     JSON result(Json::objectValue);
-    result["token"] = ToJSON(input.token);
-    result["value"] = ToJSON(input.value);
+    Set(&result, "token", input.token);
+    Set(&result, "value", input.value);
     return result;
 }
 
@@ -2734,7 +2747,7 @@ struct LogTraceParams {
 
 JSON ToJSON(const LogTraceParams& input) {
     JSON result(Json::objectValue);
-    result["message"] = ToJSON(input.message);
+    Set(&result, "message", input.message);
     OptionallySet(&result, "verbose", input.verbose);
     return result;
 }
@@ -2747,7 +2760,7 @@ struct SetTraceParams {
 
 JSON ToJSON(const SetTraceParams& input) {
     JSON result(Json::objectValue);
-    result["value"] = ToJSON(input.value);
+    Set(&result, "value", input.value);
     return result;
 }
 
@@ -2771,8 +2784,8 @@ struct ShowMessageParams {
 
 JSON ToJSON(const ShowMessageParams& input) {
     JSON result(Json::objectValue);
-    result["type"] = ToJSON(input.type);
-    result["message"] = ToJSON(input.message);
+    Set(&result, "type", input.type);
+    Set(&result, "message", input.message);
     return result;
 }
 
@@ -2784,7 +2797,7 @@ struct MessageActionItem {
 
 JSON ToJSON(const MessageActionItem& input) {
     JSON result(Json::objectValue);
-    result["title"] = ToJSON(input.title);
+    Set(&result, "title", input.title);
     return result;
 }
 
@@ -2796,8 +2809,8 @@ struct ShowMessageRequestParams {
 
 JSON ToJSON(const ShowMessageRequestParams& input) {
     JSON result(Json::objectValue);
-    result["type"] = ToJSON(input.type);
-    result["message"] = ToJSON(input.message);
+    Set(&result, "type", input.type);
+    Set(&result, "message", input.message);
     OptionallySet(&result, "actions", input.actions);
     return result;
 }
@@ -2826,9 +2839,9 @@ struct ShowDocumentParams {
 
 JSON ToJSON(const ShowDocumentParams& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
+    Set(&result, "uri", input.uri);
     OptionallySet(&result, "external", input.external);
-    OptionallySet(&result, "take_focus", input.take_focus);
+    OptionallySet(&result, "takeFocus", input.take_focus);
     OptionallySet(&result, "selection", input.selection);
     return result;
 }
@@ -2839,7 +2852,7 @@ struct ShowDocumentResult {
 
 JSON ToJSON(const ShowDocumentResult& input) {
     JSON result(Json::objectValue);
-    result["success"] = ToJSON(input.success);
+    Set(&result, "success", input.success);
     return result;
 }
 
@@ -2852,8 +2865,8 @@ struct LogMessageParams {
 
 JSON ToJSON(const LogMessageParams& input) {
     JSON result(Json::objectValue);
-    result["type"] = ToJSON(input.type);
-    result["message"] = ToJSON(input.message);
+    Set(&result, "type", input.type);
+    Set(&result, "message", input.message);
     return result;
 }
 
@@ -2865,7 +2878,7 @@ struct WorkDoneProgressCreateParams {
 
 JSON ToJSON(const WorkDoneProgressCreateParams& input) {
     JSON result(Json::objectValue);
-    result["token"] = ToJSON(input.token);
+    Set(&result, "token", input.token);
     return result;
 }
 
@@ -2877,7 +2890,7 @@ struct WorkDoneProgressCancelParams {
 
 JSON ToJSON(const WorkDoneProgressCancelParams& input) {
     JSON result(Json::objectValue);
-    result["token"] = ToJSON(input.token);
+    Set(&result, "token", input.token);
     return result;
 }
 
@@ -2891,9 +2904,9 @@ struct Registration {
 
 JSON ToJSON(const Registration& input) {
     JSON result(Json::objectValue);
-    result["id"] = ToJSON(input.id);
-    result["method"] = ToJSON(input.method);
-    OptionallySet(&result, "register_options", input.register_options);
+    Set(&result, "id", input.id);
+    Set(&result, "method", input.method);
+    OptionallySet(&result, "registerOptions", input.register_options);
     return result;
 }
 
@@ -2903,7 +2916,7 @@ struct RegistrationParams {
 
 JSON ToJSON(const RegistrationParams& input) {
     JSON result(Json::objectValue);
-    result["registrations"] = ToJSON(input.registrations);
+    Set(&result, "registrations", input.registrations);
     return result;
 }
 
@@ -2916,8 +2929,8 @@ struct Unregistration {
 
 JSON ToJSON(const Unregistration& input) {
     JSON result(Json::objectValue);
-    result["id"] = ToJSON(input.id);
-    result["method"] = ToJSON(input.method);
+    Set(&result, "id", input.id);
+    Set(&result, "method", input.method);
     return result;
 }
 
@@ -2927,7 +2940,7 @@ struct UnregistrationParams {
 
 JSON ToJSON(const UnregistrationParams& input) {
     JSON result(Json::objectValue);
-    result["unregisterations"] = ToJSON(input.unregisterations);
+    Set(&result, "unregisterations", input.unregisterations);
     return result;
 }
 
@@ -2940,8 +2953,8 @@ struct WorkspaceFoldersChangeEvent {
 
 JSON ToJSON(const WorkspaceFoldersChangeEvent& input) {
     JSON result(Json::objectValue);
-    result["added"] = ToJSON(input.added);
-    result["removed"] = ToJSON(input.removed);
+    Set(&result, "added", input.added);
+    Set(&result, "removed", input.removed);
     return result;
 }
 
@@ -2951,7 +2964,7 @@ struct DidChangeWorkspaceFoldersParams {
 
 JSON ToJSON(const DidChangeWorkspaceFoldersParams& input) {
     JSON result(Json::objectValue);
-    result["event"] = ToJSON(input.event);
+    Set(&result, "event", input.event);
     return result;
 }
 
@@ -2963,7 +2976,7 @@ struct DidChangeConfigurationParams {
 
 JSON ToJSON(const DidChangeConfigurationParams& input) {
     JSON result(Json::objectValue);
-    result["settings"] = ToJSON(input.settings);
+    Set(&result, "settings", input.settings);
     return result;
 }
 
@@ -2976,7 +2989,7 @@ struct ConfigurationItem {
 
 JSON ToJSON(const ConfigurationItem& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "scope_uri", input.scope_uri);
+    OptionallySet(&result, "scopeUri", input.scope_uri);
     OptionallySet(&result, "section", input.section);
     return result;
 }
@@ -2987,13 +3000,13 @@ struct ConfigurationParams {
 
 JSON ToJSON(const ConfigurationParams& input) {
     JSON result(Json::objectValue);
-    result["items"] = ToJSON(input.items);
+    Set(&result, "items", input.items);
     return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-enum class FileChangeType : uint32_t {
+enum class FileChangeType : int32_t {
     Created = 1, Changed = 2, Deleted = 3
 };
 
@@ -3008,8 +3021,8 @@ struct FileEvent {
 
 JSON ToJSON(const FileEvent& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
-    result["type"] = ToJSON(input.type);
+    Set(&result, "uri", input.uri);
+    Set(&result, "type", input.type);
     return result;
 }
 
@@ -3019,7 +3032,7 @@ struct DidChangeWatchedFilesParams {
 
 JSON ToJSON(const DidChangeWatchedFilesParams& input) {
     JSON result(Json::objectValue);
-    result["changes"] = ToJSON(input.changes);
+    Set(&result, "changes", input.changes);
     return result;
 }
 
@@ -3035,7 +3048,7 @@ JSON ToJSON(const WorkspaceSymbolParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_work_done_progress));
     Merge(&result, ToJSON(input.underlying_partial_result));
-    result["query"] = ToJSON(input.query);
+    Set(&result, "query", input.query);
     return result;
 }
 
@@ -3050,12 +3063,12 @@ struct SymbolInformation {
 
 JSON ToJSON(const SymbolInformation& input) {
     JSON result(Json::objectValue);
-    result["name"] = ToJSON(input.name);
-    result["kind"] = ToJSON(input.kind);
+    Set(&result, "name", input.name);
+    Set(&result, "kind", input.kind);
     OptionallySet(&result, "tags", input.tags);
     OptionallySet(&result, "deprecated", input.deprecated);
-    result["location"] = ToJSON(input.location);
-    OptionallySet(&result, "container_name", input.container_name);
+    Set(&result, "location", input.location);
+    OptionallySet(&result, "containerName", input.container_name);
     return result;
 }
 
@@ -3084,7 +3097,7 @@ struct ExecuteCommandParams {
 JSON ToJSON(const ExecuteCommandParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_work_done_progress));
-    result["command"] = ToJSON(input.command);
+    Set(&result, "command", input.command);
     OptionallySet(&result, "arguments", input.arguments);
     return result;
 }
@@ -3099,7 +3112,7 @@ struct ApplyWorkspaceEditParams {
 JSON ToJSON(const ApplyWorkspaceEditParams& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "label", input.label);
-    result["edit"] = ToJSON(input.edit);
+    Set(&result, "edit", input.edit);
     return result;
 }
 
@@ -3111,9 +3124,9 @@ struct ApplyWorkspaceEditResult {
 
 JSON ToJSON(const ApplyWorkspaceEditResult& input) {
     JSON result(Json::objectValue);
-    result["applied"] = ToJSON(input.applied);
-    OptionallySet(&result, "failure_reason", input.failure_reason);
-    OptionallySet(&result, "failed_change", input.failed_change);
+    Set(&result, "applied", input.applied);
+    OptionallySet(&result, "failureReason", input.failure_reason);
+    OptionallySet(&result, "failedChange", input.failed_change);
     return result;
 }
 
@@ -3125,7 +3138,7 @@ struct FileCreate {
 
 JSON ToJSON(const FileCreate& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
+    Set(&result, "uri", input.uri);
     return result;
 }
 
@@ -3135,7 +3148,7 @@ struct CreateFilesParams {
 
 JSON ToJSON(const CreateFilesParams& input) {
     JSON result(Json::objectValue);
-    result["files"] = ToJSON(input.files);
+    Set(&result, "files", input.files);
     return result;
 }
 
@@ -3148,8 +3161,8 @@ struct FileRename {
 
 JSON ToJSON(const FileRename& input) {
     JSON result(Json::objectValue);
-    result["old_uri"] = ToJSON(input.old_uri);
-    result["new_uri"] = ToJSON(input.new_uri);
+    Set(&result, "oldUri", input.old_uri);
+    Set(&result, "newUri", input.new_uri);
     return result;
 }
 
@@ -3159,7 +3172,7 @@ struct RenameFilesParams {
 
 JSON ToJSON(const RenameFilesParams& input) {
     JSON result(Json::objectValue);
-    result["files"] = ToJSON(input.files);
+    Set(&result, "files", input.files);
     return result;
 }
 
@@ -3171,7 +3184,7 @@ struct FileDelete {
 
 JSON ToJSON(const FileDelete& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
+    Set(&result, "uri", input.uri);
     return result;
 }
 
@@ -3181,7 +3194,7 @@ struct DeleteFilesParams {
 
 JSON ToJSON(const DeleteFilesParams& input) {
     JSON result(Json::objectValue);
-    result["files"] = ToJSON(input.files);
+    Set(&result, "files", input.files);
     return result;
 }
 
@@ -3193,7 +3206,7 @@ struct DidOpenTextDocumentParams {
 
 JSON ToJSON(const DidOpenTextDocumentParams& input) {
     JSON result(Json::objectValue);
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -3207,7 +3220,7 @@ struct TextDocumentChangeRegistrationOptions {
 JSON ToJSON(const TextDocumentChangeRegistrationOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_tdro));
-    result["sync_kind"] = ToJSON(input.sync_kind);
+    Set(&result, "syncKind", input.sync_kind);
     return result;
 }
 
@@ -3220,8 +3233,8 @@ struct TextDocumentContentChangeEvent {
 JSON ToJSON(const TextDocumentContentChangeEvent& input) {
     JSON result(Json::objectValue);
     OptionallySet(&result, "range", input.range);
-    OptionallySet(&result, "range_length", input.range_length);
-    result["text"] = ToJSON(input.text);
+    OptionallySet(&result, "rangeLength", input.range_length);
+    Set(&result, "text", input.text);
     return result;
 }
 
@@ -3232,8 +3245,8 @@ struct DidChangeTextDocumentParams {
 
 JSON ToJSON(const DidChangeTextDocumentParams& input) {
     JSON result(Json::objectValue);
-    result["text_document"] = ToJSON(input.text_document);
-    result["content_changes"] = ToJSON(input.content_changes);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "contentChanges", input.content_changes);
     return result;
 }
 
@@ -3254,8 +3267,8 @@ struct WillSaveTextDocumentParams {
 
 JSON ToJSON(const WillSaveTextDocumentParams& input) {
     JSON result(Json::objectValue);
-    result["text_document"] = ToJSON(input.text_document);
-    result["reason"] = ToJSON(input.reason);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "reason", input.reason);
     return result;
 }
 
@@ -3269,7 +3282,7 @@ struct TextDocumentSaveRegistrationOptions {
 JSON ToJSON(const TextDocumentSaveRegistrationOptions& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_tdro));
-    OptionallySet(&result, "include_text", input.include_text);
+    OptionallySet(&result, "includeText", input.include_text);
     return result;
 }
 
@@ -3280,7 +3293,7 @@ struct DidSaveTextDocumentParams {
 
 JSON ToJSON(const DidSaveTextDocumentParams& input) {
     JSON result(Json::objectValue);
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     OptionallySet(&result, "text", input.text);
     return result;
 }
@@ -3293,7 +3306,7 @@ struct DidCloseTextDocumentParams {
 
 JSON ToJSON(const DidCloseTextDocumentParams& input) {
     JSON result(Json::objectValue);
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -3307,9 +3320,9 @@ struct PublishDiagnosticsParams {
 
 JSON ToJSON(const PublishDiagnosticsParams& input) {
     JSON result(Json::objectValue);
-    result["uri"] = ToJSON(input.uri);
+    Set(&result, "uri", input.uri);
     OptionallySet(&result, "version", input.version);
-    result["diagnostics"] = ToJSON(input.diagnostics);
+    Set(&result, "diagnostics", input.diagnostics);
     return result;
 }
 
@@ -3330,8 +3343,8 @@ struct CompletionContext {
 
 JSON ToJSON(const CompletionContext& input) {
     JSON result(Json::objectValue);
-    result["trigger_kind"] = ToJSON(input.trigger_kind);
-    OptionallySet(&result, "trigger_character", input.trigger_character);
+    Set(&result, "triggerKind", input.trigger_kind);
+    OptionallySet(&result, "triggerCharacter", input.trigger_character);
     return result;
 }
 
@@ -3367,9 +3380,9 @@ struct InsertReplaceEdit {
 
 JSON ToJSON(const InsertReplaceEdit& input) {
     JSON result(Json::objectValue);
-    result["new_text"] = ToJSON(input.new_text);
-    result["insert"] = ToJSON(input.insert);
-    result["replace"] = ToJSON(input.replace);
+    Set(&result, "newText", input.new_text);
+    Set(&result, "insert", input.insert);
+    Set(&result, "replace", input.replace);
     return result;
 }
 
@@ -3410,22 +3423,22 @@ struct CompletionItem {
 
 JSON ToJSON(const CompletionItem& input) {
     JSON result(Json::objectValue);
-    result["label"] = ToJSON(input.label);
-    OptionallySet(&result, "label_details", input.label_details);
+    Set(&result, "label", input.label);
+    OptionallySet(&result, "labelDetails", input.label_details);
     OptionallySet(&result, "kind", input.kind);
     OptionallySet(&result, "tags", input.tags);
     OptionallySet(&result, "detail", input.detail);
     OptionallySet(&result, "documentation", input.documentation);
     OptionallySet(&result, "deprecated", input.deprecated);
     OptionallySet(&result, "preselect", input.preselect);
-    OptionallySet(&result, "sort_text", input.sort_text);
-    OptionallySet(&result, "filter_text", input.filter_text);
-    OptionallySet(&result, "insert_text", input.insert_text);
-    OptionallySet(&result, "insert_text_format", input.insert_text_format);
-    OptionallySet(&result, "insert_text_mode", input.insert_text_mode);
-    OptionallySet(&result, "text_edit", input.text_edit);
-    OptionallySet(&result, "additional_text_edits", input.additional_text_edits);
-    OptionallySet(&result, "commit_characters", input.commit_characters);
+    OptionallySet(&result, "sortText", input.sort_text);
+    OptionallySet(&result, "filterText", input.filter_text);
+    OptionallySet(&result, "insertText", input.insert_text);
+    OptionallySet(&result, "insertTextFormat", input.insert_text_format);
+    OptionallySet(&result, "insertTextMode", input.insert_text_mode);
+    OptionallySet(&result, "textEdit", input.text_edit);
+    OptionallySet(&result, "additionalTextEdits", input.additional_text_edits);
+    OptionallySet(&result, "commitCharacters", input.commit_characters);
     OptionallySet(&result, "command", input.command);
     OptionallySet(&result, "data", input.data);
     return result;
@@ -3438,8 +3451,8 @@ struct CompletionList {
 
 JSON ToJSON(const CompletionList& input) {
     JSON result(Json::objectValue);
-    result["is_incomplete"] = ToJSON(input.is_incomplete);
-    result["items"] = ToJSON(input.items);
+    Set(&result, "isIncomplete", input.is_incomplete);
+    Set(&result, "items", input.items);
     return result;
 }
 
@@ -3448,7 +3461,9 @@ struct CompletionResult {
 };
 
 JSON ToJSON(const CompletionResult& input) {
-    return ToJSON(input.result);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.result));
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3472,7 +3487,7 @@ struct Hover {
 
 JSON ToJSON(const Hover& input) {
     JSON result(Json::objectValue);
-    result["contents"] = ToJSON(input.contents);
+    Set(&result, "contents", input.contents);
     OptionallySet(&result, "range", input.range);
     return result;
 }
@@ -3494,7 +3509,7 @@ struct ParameterInformation {
 
 JSON ToJSON(const ParameterInformation& input) {
     JSON result(Json::objectValue);
-    result["label"] = ToJSON(input.label);
+    Set(&result, "label", input.label);
     OptionallySet(&result, "documentation", input.documentation);
     return result;
 }
@@ -3508,10 +3523,10 @@ struct SignatureInformation {
 
 JSON ToJSON(const SignatureInformation& input) {
     JSON result(Json::objectValue);
-    result["label"] = ToJSON(input.label);
+    Set(&result, "label", input.label);
     OptionallySet(&result, "documentation", input.documentation);
     OptionallySet(&result, "parameters", input.parameters);
-    OptionallySet(&result, "active_parameter", input.active_parameter);
+    OptionallySet(&result, "activeParameter", input.active_parameter);
     return result;
 }
 
@@ -3523,9 +3538,9 @@ struct SignatureHelp {
 
 JSON ToJSON(const SignatureHelp& input) {
     JSON result(Json::objectValue);
-    result["signatures"] = ToJSON(input.signatures);
-    OptionallySet(&result, "active_signature", input.active_signature);
-    OptionallySet(&result, "active_parameter", input.active_parameter);
+    Set(&result, "signatures", input.signatures);
+    OptionallySet(&result, "activeSignature", input.active_signature);
+    OptionallySet(&result, "activeParameter", input.active_parameter);
     return result;
 }
 
@@ -3538,10 +3553,10 @@ struct SignatureHelpContext {
 
 JSON ToJSON(const SignatureHelpContext& input) {
     JSON result(Json::objectValue);
-    result["trigger_kind"] = ToJSON(input.trigger_kind);
-    OptionallySet(&result, "trigger_character", input.trigger_character);
-    result["is_retrigger"] = ToJSON(input.is_retrigger);
-    OptionallySet(&result, "active_signature_help", input.active_signature_help);
+    Set(&result, "triggerKind", input.trigger_kind);
+    OptionallySet(&result, "triggerCharacter", input.trigger_character);
+    Set(&result, "isRetrigger", input.is_retrigger);
+    OptionallySet(&result, "activeSignatureHelp", input.active_signature_help);
     return result;
 }
 
@@ -3580,7 +3595,9 @@ struct DeclarationResult {
 };
 
 JSON ToJSON(const DeclarationResult& input) {
-    return ToJSON(input.result);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.result));
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3604,7 +3621,9 @@ struct DefinitionResult {
 };
 
 JSON ToJSON(const DefinitionResult& input) {
-    return ToJSON(input.result);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.result));
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3628,7 +3647,9 @@ struct TypeDefinitionResult {
 };
 
 JSON ToJSON(const TypeDefinitionResult& input) {
-    return ToJSON(input.result);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.result));
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3652,7 +3673,9 @@ struct ImplementationResult {
 };
 
 JSON ToJSON(const ImplementationResult& input) {
-    return ToJSON(input.result);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.result));
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3663,7 +3686,7 @@ struct ReferenceContext {
 
 JSON ToJSON(const ReferenceContext& input) {
     JSON result(Json::objectValue);
-    result["include_declaration"] = ToJSON(input.include_declaration);
+    Set(&result, "includeDeclaration", input.include_declaration);
     return result;
 }
 
@@ -3679,7 +3702,7 @@ JSON ToJSON(const ReferenceParams& input) {
     Merge(&result, ToJSON(input.underlying_tdpp));
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["context"] = ToJSON(input.context);
+    Set(&result, "context", input.context);
     return result;
 }
 
@@ -3688,7 +3711,9 @@ struct ReferenceResult {
 };
 
 JSON ToJSON(const ReferenceResult& input) {
-    return ToJSON(input.result);
+    JSON result(Json::objectValue);
+    Merge(&result, ToJSON(input.result));
+    return result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3722,7 +3747,7 @@ struct DocumentHighlight {
 
 JSON ToJSON(const DocumentHighlight& input) {
     JSON result(Json::objectValue);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "range", input.range);
     OptionallySet(&result, "kind", input.kind);
     return result;
 }
@@ -3739,7 +3764,7 @@ JSON ToJSON(const DocumentSymbolParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -3756,13 +3781,13 @@ struct DocumentSymbol {
 
 JSON ToJSON(const DocumentSymbol& input) {
     JSON result(Json::objectValue);
-    result["name"] = ToJSON(input.name);
+    Set(&result, "name", input.name);
     OptionallySet(&result, "detail", input.detail);
-    result["kind"] = ToJSON(input.kind);
+    Set(&result, "kind", input.kind);
     OptionallySet(&result, "tags", input.tags);
     OptionallySet(&result, "deprecated", input.deprecated);
-    result["range"] = ToJSON(input.range);
-    result["selection_range"] = ToJSON(input.selection_range);
+    Set(&result, "range", input.range);
+    Set(&result, "selectionRange", input.selection_range);
     OptionallySet(&result, "children", input.children);
     return result;
 }
@@ -3781,7 +3806,7 @@ struct CodeActionContext {
 
 JSON ToJSON(const CodeActionContext& input) {
     JSON result(Json::objectValue);
-    result["diagnostics"] = ToJSON(input.diagnostics);
+    Set(&result, "diagnostics", input.diagnostics);
     OptionallySet(&result, "only", input.only);
     return result;
 }
@@ -3798,9 +3823,9 @@ JSON ToJSON(const CodeActionParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
-    result["range"] = ToJSON(input.range);
-    result["context"] = ToJSON(input.context);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "range", input.range);
+    Set(&result, "context", input.context);
     return result;
 }
 
@@ -3817,10 +3842,10 @@ struct CodeAction {
 
 JSON ToJSON(const CodeAction& input) {
     JSON result(Json::objectValue);
-    result["title"] = ToJSON(input.title);
+    Set(&result, "title", input.title);
     OptionallySet(&result, "kind", input.kind);
     OptionallySet(&result, "diagnostics", input.diagnostics);
-    OptionallySet(&result, "is_preferred", input.is_preferred);
+    OptionallySet(&result, "isPreferred", input.is_preferred);
     if (input.disabled.has_value()) {
         JSON disabled(Json::objectValue);
         disabled["reason"] = ToJSON(input.disabled.value());
@@ -3847,7 +3872,7 @@ JSON ToJSON(const CodeLensParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -3859,7 +3884,7 @@ struct CodeLens {
 
 JSON ToJSON(const CodeLens& input) {
     JSON result(Json::objectValue);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "range", input.range);
     OptionallySet(&result, "command", input.command);
     OptionallySet(&result, "data", input.data);
     return result;
@@ -3879,7 +3904,7 @@ JSON ToJSON(const DocumentLinkParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -3892,7 +3917,7 @@ struct DocumentLink {
 
 JSON ToJSON(const DocumentLink& input) {
     JSON result(Json::objectValue);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "range", input.range);
     OptionallySet(&result, "target", input.target);
     OptionallySet(&result, "tooltip", input.tooltip);
     OptionallySet(&result, "data", input.data);
@@ -3913,7 +3938,7 @@ JSON ToJSON(const DocumentColorParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -3926,10 +3951,10 @@ struct Color {
 
 JSON ToJSON(const Color& input) {
     JSON result(Json::objectValue);
-    result["red"] = ToJSON(input.red);
-    result["green"] = ToJSON(input.green);
-    result["blue"] = ToJSON(input.blue);
-    result["alpha"] = ToJSON(input.alpha);
+    Set(&result, "red", input.red);
+    Set(&result, "green", input.green);
+    Set(&result, "blue", input.blue);
+    Set(&result, "alpha", input.alpha);
     return result;
 }
 
@@ -3940,8 +3965,8 @@ struct ColorInformation {
 
 JSON ToJSON(const ColorInformation& input) {
     JSON result(Json::objectValue);
-    result["range"] = ToJSON(input.range);
-    result["color"] = ToJSON(input.color);
+    Set(&result, "range", input.range);
+    Set(&result, "color", input.color);
     return result;
 }
 
@@ -3961,9 +3986,9 @@ JSON ToJSON(const ColorPresentationParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
-    result["color"] = ToJSON(input.color);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "color", input.color);
+    Set(&result, "range", input.range);
     return result;
 }
 
@@ -3975,9 +4000,9 @@ struct ColorPresentation {
 
 JSON ToJSON(const ColorPresentation& input) {
     JSON result(Json::objectValue);
-    result["label"] = ToJSON(input.label);
-    OptionallySet(&result, "text_edit", input.text_edit);
-    OptionallySet(&result, "additional_text_edits", input.additional_text_edits);
+    Set(&result, "label", input.label);
+    OptionallySet(&result, "textEdit", input.text_edit);
+    OptionallySet(&result, "additionalTextEdits", input.additional_text_edits);
     return result;
 }
 
@@ -3998,11 +4023,11 @@ struct FormattingOptions {
 
 JSON ToJSON(const FormattingOptions& input) {
     JSON result(Json::objectValue);
-    result["tab_size"] = ToJSON(input.tab_size);
-    result["insert_spaces"] = ToJSON(input.insert_spaces);
-    OptionallySet(&result, "trim_trailing_whitespace", input.trim_trailing_whitespace);
-    OptionallySet(&result, "insert_final_newline", input.insert_final_newline);
-    OptionallySet(&result, "trim_final_newlines", input.trim_final_newlines);
+    Set(&result, "tabSize", input.tab_size);
+    Set(&result, "insertSpaces", input.insert_spaces);
+    OptionallySet(&result, "trimTrailingWhitespace", input.trim_trailing_whitespace);
+    OptionallySet(&result, "insertFinalNewline", input.insert_final_newline);
+    OptionallySet(&result, "trimFinalNewlines", input.trim_final_newlines);
     Merge(&result, ToJSON(input.extra_properties));
     return result;
 }
@@ -4016,8 +4041,8 @@ struct DocumentFormattingParams {
 JSON ToJSON(const DocumentFormattingParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
-    result["text_document"] = ToJSON(input.text_document);
-    result["options"] = ToJSON(input.options);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "options", input.options);
     return result;
 }
 
@@ -4035,9 +4060,9 @@ struct DocumentRangeFormattingParams {
 JSON ToJSON(const DocumentRangeFormattingParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
-    result["text_document"] = ToJSON(input.text_document);
-    result["range"] = ToJSON(input.range);
-    result["options"] = ToJSON(input.options);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "range", input.range);
+    Set(&result, "options", input.options);
     return result;
 }
 
@@ -4054,8 +4079,8 @@ struct DocumentOnTypeFormattingParams {
 JSON ToJSON(const DocumentOnTypeFormattingParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_tdpp));
-    result["ch"] = ToJSON(input.ch);
-    result["options"] = ToJSON(input.options);
+    Set(&result, "ch", input.ch);
+    Set(&result, "options", input.options);
     return result;
 }
 
@@ -4073,7 +4098,7 @@ JSON ToJSON(const RenameParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_tdpp));
     Merge(&result, ToJSON(input.underlying_wdpp));
-    result["new_name"] = ToJSON(input.new_name);
+    Set(&result, "newName", input.new_name);
     return result;
 }
 
@@ -4129,7 +4154,7 @@ JSON ToJSON(const FoldingRangeParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -4157,10 +4182,10 @@ struct FoldingRange {
 
 JSON ToJSON(const FoldingRange& input) {
     JSON result(Json::objectValue);
-    result["start_line"] = ToJSON(input.start_line);
-    OptionallySet(&result, "start_character", input.start_character);
-    result["end_line"] = ToJSON(input.end_line);
-    OptionallySet(&result, "end_character", input.end_character);
+    Set(&result, "startLine", input.start_line);
+    OptionallySet(&result, "startCharacter", input.start_character);
+    Set(&result, "endLine", input.end_line);
+    OptionallySet(&result, "endCharacter", input.end_character);
     OptionallySet(&result, "kind", input.kind);
     return result;
 }
@@ -4180,8 +4205,8 @@ JSON ToJSON(const SelectionRangeParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
-    result["positions"] = ToJSON(input.positions);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "positions", input.positions);
     return result;
 }
 
@@ -4192,7 +4217,7 @@ struct SelectionRange {
 
 JSON ToJSON(const SelectionRange& input) {
     JSON result(Json::objectValue);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "range", input.range);
     if (input.parent.has_value()) {
         result["parent"] = ToJSON(*(input.parent.value()));
     }
@@ -4228,13 +4253,13 @@ struct CallHierarchyItem {
 
 JSON ToJSON(const CallHierarchyItem& input) {
     JSON result(Json::objectValue);
-    result["name"] = ToJSON(input.name);
-    result["kind"] = ToJSON(input.kind);
+    Set(&result, "name", input.name);
+    Set(&result, "kind", input.kind);
     OptionallySet(&result, "tags", input.tags);
     OptionallySet(&result, "detail", input.detail);
-    result["uri"] = ToJSON(input.uri);
-    result["range"] = ToJSON(input.range);
-    result["selection_range"] = ToJSON(input.selection_range);
+    Set(&result, "uri", input.uri);
+    Set(&result, "range", input.range);
+    Set(&result, "selectionRange", input.selection_range);
     OptionallySet(&result, "data", input.data);
     return result;
 }
@@ -4254,7 +4279,7 @@ JSON ToJSON(const CallHierarchyIncomingCallsParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["item"] = ToJSON(input.item);
+    Set(&result, "item", input.item);
     return result;
 }
 
@@ -4265,8 +4290,8 @@ struct CallHierarchyIncomingCall {
 
 JSON ToJSON(const CallHierarchyIncomingCall& input) {
     JSON result(Json::objectValue);
-    result["from"] = ToJSON(input.from);
-    result["from_ranges"] = ToJSON(input.from_ranges);
+    Set(&result, "from", input.from);
+    Set(&result, "fromRanges", input.from_ranges);
     return result;
 }
 
@@ -4285,7 +4310,7 @@ JSON ToJSON(const CallHierarchyOutgoingCallsParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["item"] = ToJSON(input.item);
+    Set(&result, "item", input.item);
     return result;
 }
 
@@ -4296,8 +4321,8 @@ struct CallHierarchyOutgoingCall {
 
 JSON ToJSON(const CallHierarchyOutgoingCall& input) {
     JSON result(Json::objectValue);
-    result["to"] = ToJSON(input.to);
-    result["from_ranges"] = ToJSON(input.from_ranges);
+    Set(&result, "to", input.to);
+    Set(&result, "fromRanges", input.from_ranges);
     return result;
 }
 
@@ -4316,7 +4341,7 @@ JSON ToJSON(const SemanticTokensParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
+    Set(&result, "textDocument", input.text_document);
     return result;
 }
 
@@ -4327,8 +4352,8 @@ struct SemanticTokens {
 
 JSON ToJSON(const SemanticTokens& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "result_id", input.result_id);
-    result["data"] = ToJSON(input.data);
+    OptionallySet(&result, "resultId", input.result_id);
+    Set(&result, "data", input.data);
     return result;
 }
 
@@ -4347,8 +4372,8 @@ JSON ToJSON(const SemanticTokensDeltaParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
-    result["previous_result_id"] = ToJSON(input.previous_result_id);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "previousResultId", input.previous_result_id);
     return result;
 }
 
@@ -4360,8 +4385,8 @@ struct SemanticTokensEdit {
 
 JSON ToJSON(const SemanticTokensEdit& input) {
     JSON result(Json::objectValue);
-    result["start"] = ToJSON(input.start);
-    result["delete_count"] = ToJSON(input.delete_count);
+    Set(&result, "start", input.start);
+    Set(&result, "deleteCount", input.delete_count);
     OptionallySet(&result, "data", input.data);
     return result;
 }
@@ -4373,8 +4398,8 @@ struct SemanticTokensDelta {
 
 JSON ToJSON(const SemanticTokensDelta& input) {
     JSON result(Json::objectValue);
-    OptionallySet(&result, "result_id", input.result_id);
-    result["edits"] = ToJSON(input.edits);
+    OptionallySet(&result, "resultId", input.result_id);
+    Set(&result, "edits", input.edits);
     return result;
 }
 
@@ -4394,8 +4419,8 @@ JSON ToJSON(const SemanticTokensRangeParams& input) {
     JSON result(Json::objectValue);
     Merge(&result, ToJSON(input.underlying_wdpp));
     Merge(&result, ToJSON(input.underlying_prp));
-    result["text_document"] = ToJSON(input.text_document);
-    result["range"] = ToJSON(input.range);
+    Set(&result, "textDocument", input.text_document);
+    Set(&result, "range", input.range);
     return result;
 }
 
@@ -4422,8 +4447,8 @@ struct LinkedEditingRanges {
 
 JSON ToJSON(const LinkedEditingRanges& input) {
     JSON result(Json::objectValue);
-    result["ranges"] = ToJSON(input.ranges);
-    OptionallySet(&result, "word_pattern", input.word_pattern);
+    Set(&result, "ranges", input.ranges);
+    OptionallySet(&result, "wordPattern", input.word_pattern);
     return result;
 }
 
@@ -4484,9 +4509,9 @@ struct Moniker {
 
 JSON ToJSON(const Moniker& input) {
     JSON result(Json::objectValue);
-    result["scheme"] = ToJSON(input.scheme);
-    result["identifier"] = ToJSON(input.identifier);
-    result["unique"] = ToJSON(input.unique);
+    Set(&result, "scheme", input.scheme);
+    Set(&result, "identifier", input.identifier);
+    Set(&result, "unique", input.unique);
     OptionallySet(&result, "kind", input.kind);
     return result;
 }
