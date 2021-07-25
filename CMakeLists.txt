@@ -45,9 +45,10 @@ target_link_libraries(rdss_filesystem
 
 find_package(absl REQUIRED)
 add_executable(rdss
-  src/subprocess.cpp
   src/rdss.cpp
-  src/ast.cpp)
+  src/subprocess.cpp
+  src/ast.cpp
+  src/lsp.cpp)
 target_link_libraries(rdss
   rdss_filesystem
   rdss_logging
